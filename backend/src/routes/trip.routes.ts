@@ -1,46 +1,36 @@
 import { Router } from "express";
-import { z } from "zod";
-import { cancelTrip, completeTrip, dispatchTrip } from "../services/tripLifecycle.js";
-
-const tripIdSchema = z.coerce.number().int().positive();
-
-const completeTripSchema = z.object({
-  finalOdometerKm: z.number().nonnegative(),
-  fuelConsumedLiters: z.number().nonnegative(),
-});
+import {
+  cancelTripController,
+  completeTripController,
+  createTripController,
+  dispatchTripController,
+  getTripsController,
+} from "../controllers/trips.controller.js";
+import { requireAuth, requireRoles } from "../middleware/auth.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
 
 export const tripRouter = Router();
 
-tripRouter.post("/:tripId/dispatch", async (req, res, next) => {
-  try {
-    const tripId = tripIdSchema.parse(req.params.tripId);
-    const trip = await dispatchTrip(tripId);
+tripRouter.use(requireAuth);
 
-    return res.json({ trip });
-  } catch (error) {
-    return next(error);
-  }
-});
-
-tripRouter.post("/:tripId/complete", async (req, res, next) => {
-  try {
-    const tripId = tripIdSchema.parse(req.params.tripId);
-    const payload = completeTripSchema.parse(req.body);
-    const trip = await completeTrip(tripId, payload);
-
-    return res.json({ trip });
-  } catch (error) {
-    return next(error);
-  }
-});
-
-tripRouter.post("/:tripId/cancel", async (req, res, next) => {
-  try {
-    const tripId = tripIdSchema.parse(req.params.tripId);
-    const trip = await cancelTrip(tripId);
-
-    return res.json({ trip });
-  } catch (error) {
-    return next(error);
-  }
-});
+tripRouter.get(
+  "/",
+  requireRoles("fleet_manager", "driver", "financial_analyst"),
+  asyncHandler(getTripsController),
+);
+tripRouter.post("/", requireRoles("fleet_manager", "driver"), asyncHandler(createTripController));
+tripRouter.post(
+  "/:tripId/dispatch",
+  requireRoles("fleet_manager", "driver"),
+  asyncHandler(dispatchTripController),
+);
+tripRouter.post(
+  "/:tripId/complete",
+  requireRoles("fleet_manager", "driver"),
+  asyncHandler(completeTripController),
+);
+tripRouter.post(
+  "/:tripId/cancel",
+  requireRoles("fleet_manager", "driver"),
+  asyncHandler(cancelTripController),
+);
