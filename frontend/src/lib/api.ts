@@ -4,11 +4,13 @@ export type ApiErrorResponse = {
 };
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000/api";
+const DEMO_TOKEN = import.meta.env.VITE_DEMO_TOKEN;
 
 export const apiRequest = async <T>(path: string, init?: RequestInit): Promise<T> => {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
       "Content-Type": "application/json",
+      ...(DEMO_TOKEN ? { Authorization: `Bearer ${DEMO_TOKEN}` } : {}),
       ...init?.headers,
     },
     ...init,
@@ -22,6 +24,9 @@ export const apiRequest = async <T>(path: string, init?: RequestInit): Promise<T
     throw error;
   }
 
+  if (response.status === 204) {
+    return undefined as T;
+  }
+
   return response.json() as Promise<T>;
 };
-

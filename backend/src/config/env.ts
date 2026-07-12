@@ -9,7 +9,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url(),
   JWT_SECRET: z.string().min(20, "JWT_SECRET must be at least 20 characters"),
   JWT_EXPIRES_IN: z.string().default("8h"),
-  CORS_ORIGIN: z.string().url().default("http://localhost:5173"),
+  CORS_ORIGIN: z.string().min(1).default("http://localhost:5173"),
 });
 
 export const env = envSchema.parse(process.env);
