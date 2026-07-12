@@ -1,14 +1,14 @@
 import { apiRequest } from "./api";
 import type { Driver, DriverFormValues, DriverListResponse, DriverResponse } from "../types/driver";
 
-const toDriverPayload = (values: DriverFormValues) => ({
+const toDriverPayload = (values: DriverFormValues, includeStatus = true) => ({
   name: values.name,
   licenseNumber: values.licenseNumber,
   licenseCategory: values.licenseCategory,
   licenseExpiryDate: values.licenseExpiryDate,
   contactNumber: values.contactNumber,
   safetyScore: Number(values.safetyScore || 100),
-  status: values.status,
+  ...(includeStatus ? { status: values.status } : {}),
 });
 
 export const getDrivers = (page = 1, limit = 10) =>
@@ -28,7 +28,7 @@ export const createDriver = (values: DriverFormValues) =>
 export const updateDriver = (driver: Driver, values: DriverFormValues) =>
   apiRequest<DriverResponse>(`/drivers/${driver.id}`, {
     method: "PUT",
-    body: JSON.stringify(toDriverPayload(values)),
+    body: JSON.stringify(toDriverPayload(values, values.status !== driver.status)),
   });
 
 export const deleteDriver = (driver: Driver) =>
