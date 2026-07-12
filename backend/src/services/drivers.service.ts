@@ -115,6 +115,38 @@ export const updateDriver = async (id: number, input: z.infer<typeof updateDrive
   }
 };
 
+export const bulkUpdateDriverStatus = async (ids: number[], status: DriverStatus) => {
+  const drivers = await prisma.driver.findMany({ where: { id: { in: ids } }, select: { id: true } });
+  const foundIds = new Set(drivers.map((driver) => driver.id));
+  return Promise.all(ids.map(async (id) => {
+    if (!foundIds.has(id)) return { id, success: false, field: "driver", message: "Driver not found" };
+    try {
+      await prisma.driver.update({ where: { id }, data: { status } });
+      return { id, success: true };
+    } catch (error) {
+      return { id, success: false, field: "status", message: error instanceof Error ? error.message : "Unable to update driver" };
+    }
+  }));
+};
+
+export const createSafetyEventSchema = z.object({
+  score: z.coerce.number().int().min(0, "Safety score cannot be below 0").max(100, "Safety score cannot exceed 100"),
+  reason: z.string().trim().max(240).optional(),
+});
+
+export const createSafetyEvent = async (driverId: number, input: z.infer<typeof createSafetyEventSchema>) => {
+  const driver = await prisma.driver.findUnique({ where: { id: driverId }, select: { id: true } });
+  if (!driver) throw new ApiError(404, "driver", "Driver not found");
+  const event = await prisma.safetyScoreEvent.create({ data: { driverId, ...input } });
+  await prisma.driver.update({ where: { id: driverId }, data: { safetyScore: input.score } });
+  return event;
+};
+
+export const getSafetyHistory = async (driverId: number) => {
+  await getDriverById(driverId);
+  return prisma.safetyScoreEvent.findMany({ where: { driverId }, orderBy: { recordedAt: "asc" } });
+};
+
 export const unsuspendDriver = async (id: number) => {
   try {
     const driver = await prisma.driver.findUnique({ where: { id } });

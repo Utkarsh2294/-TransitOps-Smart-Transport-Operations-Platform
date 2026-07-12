@@ -36,3 +36,5 @@ export type DriverResponse = {
   data: Driver;
 };
 
+export type SafetyScoreEvent = { id: number; driverId: number; score: number; reason: string | null; recordedAt: string };
+

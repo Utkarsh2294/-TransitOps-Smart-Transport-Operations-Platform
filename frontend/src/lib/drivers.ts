@@ -1,5 +1,5 @@
 import { apiRequest } from "./api";
-import type { Driver, DriverFormValues, DriverListResponse, DriverResponse } from "../types/driver";
+import type { Driver, DriverFormValues, DriverListResponse, DriverResponse, SafetyScoreEvent } from "../types/driver";
 
 const toDriverPayload = (values: DriverFormValues, includeStatus = true) => ({
   name: values.name,
@@ -35,4 +35,8 @@ export const deleteDriver = (driver: Driver) =>
   apiRequest<void>(`/drivers/${driver.id}`, {
     method: "DELETE",
   });
+
+export const bulkUpdateDriverStatus = (ids: number[], status: Driver["status"]) => apiRequest<{ data: { id: number; success: boolean; message?: string }[] }>("/drivers/bulk-status", { method: "PATCH", body: JSON.stringify({ ids, status }) });
+export const getSafetyHistory = (driverId: number) => apiRequest<{ data: SafetyScoreEvent[] }>(`/drivers/${driverId}/safety-history`);
+export const createSafetyEvent = (driverId: number, score: number, reason?: string) => apiRequest<{ data: SafetyScoreEvent }>(`/drivers/${driverId}/safety-events`, { method: "POST", body: JSON.stringify({ score, reason }) });
 

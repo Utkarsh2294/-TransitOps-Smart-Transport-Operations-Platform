@@ -2,10 +2,14 @@ import type { Request, Response } from "express";
 import { z } from "zod";
 
 import {
+  bulkUpdateDriverStatus,
   createDriver,
   createDriverSchema,
+  createSafetyEvent,
+  createSafetyEventSchema,
   deleteDriver,
   getDriverById,
+  getSafetyHistory,
   listAvailableDrivers,
   listDrivers,
   unsuspendDriver,
@@ -66,5 +70,23 @@ export const deleteDriverController = async (req: Request, res: Response) => {
   const id = parseDriverId(req.params);
   await deleteDriver(id);
   res.status(204).send();
+};
+
+const bulkStatusSchema = z.object({ ids: z.array(z.coerce.number().int().positive()).min(1).max(100), status: z.enum(["Available", "On_Trip", "Off_Duty", "Suspended"]) });
+
+export const bulkUpdateDriverStatusController = async (req: Request, res: Response) => {
+  const payload = bulkStatusSchema.parse(req.body);
+  res.json({ data: await bulkUpdateDriverStatus(payload.ids, payload.status) });
+};
+
+export const createSafetyEventController = async (req: Request, res: Response) => {
+  const id = parseDriverId(req.params);
+  const payload = createSafetyEventSchema.parse(req.body);
+  res.status(201).json({ data: await createSafetyEvent(id, payload) });
+};
+
+export const getSafetyHistoryController = async (req: Request, res: Response) => {
+  const id = parseDriverId(req.params);
+  res.json({ data: await getSafetyHistory(id) });
 };
 

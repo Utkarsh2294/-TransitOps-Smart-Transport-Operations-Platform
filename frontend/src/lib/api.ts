@@ -5,11 +5,13 @@ export type ApiErrorResponse = {
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000/api";
 const DEMO_TOKEN = import.meta.env.VITE_DEMO_TOKEN;
+const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
 
 export const apiRequest = async <T>(path: string, init?: RequestInit): Promise<T> => {
+  const isFormData = init?.body instanceof FormData;
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
-      "Content-Type": "application/json",
+      ...(isFormData ? {} : { "Content-Type": "application/json" }),
       ...(DEMO_TOKEN ? { Authorization: `Bearer ${DEMO_TOKEN}` } : {}),
       ...init?.headers,
     },
@@ -30,3 +32,7 @@ export const apiRequest = async <T>(path: string, init?: RequestInit): Promise<T
 
   return response.json() as Promise<T>;
 };
+
+export const apiUrl = (path: string) => `${API_BASE_URL}${path}`;
+export const apiOrigin = API_ORIGIN;
+export const demoToken = DEMO_TOKEN;

@@ -1,10 +1,11 @@
-import { Plus, RefreshCw, Save, Trash2, X } from "lucide-react";
+import { CheckSquare, Plus, RefreshCw, Save, Trash2, X } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { Button } from "../ui/Button";
 import { StatusBadge } from "../ui/StatusBadge";
 import { VehicleMaintenance } from "../maintenance/VehicleMaintenance";
-import { createVehicle, deleteVehicle, getVehicles, updateVehicle } from "../../lib/vehicles";
+import { VehicleDocuments } from "./VehicleDocuments";
+import { bulkUpdateVehicleStatus, createVehicle, deleteVehicle, getVehicles, updateVehicle } from "../../lib/vehicles";
 import type { ApiErrorResponse } from "../../lib/api";
 import type { Vehicle, VehicleFormValues, VehicleStatus } from "../../types/vehicle";
 
@@ -15,6 +16,7 @@ const blankForm: VehicleFormValues = {
   maxLoadCapacityKg: "",
   odometerKm: "0",
   acquisitionCost: "",
+  serviceIntervalKm: "10000",
   status: "Available",
 };
 
@@ -27,6 +29,7 @@ const toFormValues = (vehicle: Vehicle): VehicleFormValues => ({
   maxLoadCapacityKg: String(vehicle.maxLoadCapacityKg),
   odometerKm: String(vehicle.odometerKm),
   acquisitionCost: String(vehicle.acquisitionCost),
+  serviceIntervalKm: vehicle.serviceIntervalKm ? String(vehicle.serviceIntervalKm) : "",
   status: vehicle.status,
 });
 
@@ -82,6 +85,8 @@ export const VehicleRegistry = () => {
   const [serverError, setServerError] = useState<ApiErrorResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [bulkStatus, setBulkStatus] = useState<VehicleStatus>("Available");
 
   const availableCount = useMemo(
     () => vehicles.filter((vehicle) => vehicle.status === "Available").length,
@@ -186,6 +191,11 @@ export const VehicleRegistry = () => {
     }
   };
 
+  const applyBulkStatus = async () => {
+    if (!selectedIds.length || !window.confirm(`Change ${selectedIds.length} selected vehicles to ${bulkStatus.replace("_", " ")}?`)) return;
+    setIsSaving(true); try { await bulkUpdateVehicleStatus(selectedIds, bulkStatus); setSelectedIds([]); await loadVehicles(); } catch (error) { setServerError(error as ApiErrorResponse); } finally { setIsSaving(false); }
+  };
+
   return (
     <section className="mx-auto max-w-7xl px-4 py-7 lg:px-8">
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
@@ -204,6 +214,8 @@ export const VehicleRegistry = () => {
           </Button>
         </div>
       </div>
+
+      {selectedIds.length ? <div className="mb-4 flex flex-wrap items-center gap-3 rounded-[14px] border border-primary bg-panel px-4 py-3"><CheckSquare className="h-4 w-4 text-primary" /><span className="text-sm font-semibold">{selectedIds.length} selected</span><select className="h-9 rounded-md border border-border bg-background px-2 text-sm" onChange={(event) => setBulkStatus(event.target.value as VehicleStatus)} value={bulkStatus}>{statuses.map((status) => <option key={status} value={status}>{status.replace("_", " ")}</option>)}</select><Button disabled={isSaving} onClick={() => void applyBulkStatus()} size="sm" type="button">Apply status</Button></div> : null}
 
       <div className="mb-6 grid gap-4 md:grid-cols-4">
         <div className="rounded-lg border border-border bg-raised p-5 shadow-card md:col-span-2 md:row-span-2">
@@ -263,10 +275,12 @@ export const VehicleRegistry = () => {
               <table className="w-full min-w-[760px] border-collapse text-left text-sm">
                 <thead className="bg-panel text-xs uppercase tracking-wide text-muted">
                   <tr>
+                    <th className="px-5 py-3 font-medium"><input aria-label="Select all vehicles" checked={vehicles.length > 0 && selectedIds.length === vehicles.length} onChange={(event) => setSelectedIds(event.target.checked ? vehicles.map((vehicle) => vehicle.id) : [])} type="checkbox" /></th>
                     <th className="px-5 py-3 font-medium">Reg No.</th>
                     <th className="px-5 py-3 font-medium">Vehicle</th>
                     <th className="px-5 py-3 font-medium">Type</th>
                     <th className="px-5 py-3 font-medium">Capacity</th>
+                    <th className="px-5 py-3 font-medium">Docs</th>
                     <th className="px-5 py-3 font-medium">Status</th>
                   </tr>
                 </thead>
@@ -277,11 +291,17 @@ export const VehicleRegistry = () => {
                       key={vehicle.id}
                       onClick={() => startEdit(vehicle)}
                     >
+                      <td className="px-5 py-4" onClick={(event) => event.stopPropagation()}><input aria-label={`Select ${vehicle.regNumber}`} checked={selectedIds.includes(vehicle.id)} onChange={(event) => setSelectedIds((current) => event.target.checked ? [...current, vehicle.id] : current.filter((id) => id !== vehicle.id))} type="checkbox" /></td>
                       <td className="px-5 py-4 font-semibold text-foreground">{vehicle.regNumber}</td>
                       <td className="px-5 py-4 text-muted">{vehicle.name}</td>
                       <td className="px-5 py-4 text-muted">{vehicle.type}</td>
                       <td className="px-5 py-4 text-muted">
                         {formatNumber(vehicle.maxLoadCapacityKg)} kg
+                      </td>
+                      <td className="px-5 py-4">
+                        <span className={`text-xs font-semibold ${vehicle.documentCount >= 4 ? "text-success" : "text-warning"}`}>
+                          {vehicle.documentCount}/4 docs
+                        </span>
                       </td>
                       <td className="px-5 py-4">
                         <StatusBadge status={vehicle.status} />
@@ -320,6 +340,7 @@ export const VehicleRegistry = () => {
               onChange={handleFieldChange}
               value={values.regNumber}
             />
+            <Field label="Service Interval Km" name="serviceIntervalKm" onChange={handleFieldChange} type="number" value={values.serviceIntervalKm} />
             <Field
               error={errors.name}
               label="Vehicle Name"
@@ -396,6 +417,7 @@ export const VehicleRegistry = () => {
           </div>
         </form>
         {selectedVehicle ? <VehicleMaintenance key={selectedVehicle.id} onChanged={loadVehicles} vehicle={selectedVehicle} /> : null}
+        {selectedVehicle ? <VehicleDocuments key={`documents-${selectedVehicle.id}`} onChanged={loadVehicles} vehicle={selectedVehicle} /> : null}
         </div>
       </div>
     </section>

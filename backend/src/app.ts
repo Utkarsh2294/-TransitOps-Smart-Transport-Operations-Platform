@@ -13,6 +13,9 @@ import { insightsRouter } from "./routes/insights.routes.js";
 import { reportsRouter } from "./routes/reports.routes.js";
 import { tripRouter } from "./routes/trip.routes.js";
 import { vehiclesRouter } from "./routes/vehicles.routes.js";
+import { safetyRouter } from "./routes/safety.routes.js";
+import { searchRouter } from "./routes/search.routes.js";
+import { uploadsPath } from "./middleware/upload.js";
 
 export const createApp = () => {
   const app = express();
@@ -29,11 +32,14 @@ export const createApp = () => {
   app.use(morgan(env.NODE_ENV === "production" ? "combined" : "dev"));
 
   app.use("/api/health", healthRouter);
+  app.use("/uploads", express.static(uploadsPath));
   app.use("/api/drivers", driversRouter);
   app.use("/api/finance", financeRouter);
   app.use("/api/maintenance", maintenanceRouter);
   app.use("/api/insights", insightsRouter);
   app.use("/api/reports", reportsRouter);
+  app.use("/api/safety", safetyRouter);
+  app.use("/api/search", searchRouter);
   app.use("/api/trips", tripRouter);
   app.use("/api/vehicles", vehiclesRouter);
 

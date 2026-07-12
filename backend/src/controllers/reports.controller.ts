@@ -4,6 +4,7 @@ import {
   getFleetDashboardReport,
   getVehicleCostReport,
   getVehicleCostReportCsv,
+  getCompliancePdf,
 } from "../services/reports.service.js";
 
 export const getFleetDashboardReportController = async (_req: Request, res: Response) => {
@@ -22,5 +23,12 @@ export const exportVehicleCostReportController = async (_req: Request, res: Resp
   res.header("Content-Type", "text/csv");
   res.attachment("vehicle-cost-report.csv");
   res.send(csv);
+};
+
+export const exportCompliancePdfController = async (_req: Request, res: Response) => {
+  const pdf = await getCompliancePdf();
+  res.header("Content-Type", "application/pdf");
+  res.attachment("transitops-compliance-report.pdf");
+  res.send(pdf);
 };
 

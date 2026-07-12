@@ -151,7 +151,10 @@ export const closeMaintenance = async (id: number) => {
       if (maintenance.vehicle.status !== VehicleStatus.Retired) {
         await tx.vehicle.update({
           where: { id: maintenance.vehicleId },
-          data: { status: VehicleStatus.Available },
+          data: {
+            status: VehicleStatus.Available,
+            lastServiceOdometerKm: maintenance.vehicle.odometerKm,
+          },
         });
       }
 

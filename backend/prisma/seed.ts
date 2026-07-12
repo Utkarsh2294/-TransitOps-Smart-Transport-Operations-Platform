@@ -42,8 +42,8 @@ const seed = async () => {
       const [regNumber, name, type, maxLoadCapacityKg, odometerKm, acquisitionCost, status] = vehicle;
       await tx.vehicle.upsert({
         where: { regNumber },
-        update: { name, type, maxLoadCapacityKg, odometerKm, acquisitionCost, status },
-        create: { regNumber, name, type, maxLoadCapacityKg, odometerKm, acquisitionCost, status },
+        update: { name, type, maxLoadCapacityKg, odometerKm, acquisitionCost, status, serviceIntervalKm: 10000, lastServiceOdometerKm: String(Math.max(0, Number(odometerKm) - 8200)) },
+        create: { regNumber, name, type, maxLoadCapacityKg, odometerKm, acquisitionCost, status, serviceIntervalKm: 10000, lastServiceOdometerKm: String(Math.max(0, Number(odometerKm) - 8200)) },
       });
     }
 
@@ -70,6 +70,27 @@ const seed = async () => {
           status,
         },
       });
+    }
+
+    const seededVehicles = await tx.vehicle.findMany({ take: 4, orderBy: { id: "asc" } });
+    for (const [index, vehicle] of seededVehicles.entries()) {
+      await tx.vehicleDocument.deleteMany({ where: { vehicleId: vehicle.id } });
+      await tx.vehicleDocument.createMany({ data: [
+        { vehicleId: vehicle.id, docType: "RC", fileName: "registration-certificate.pdf", fileUrl: "/uploads/demo-registration-certificate.pdf", expiryDate: new Date(index === 0 ? "2026-07-20" : "2027-01-15") },
+        { vehicleId: vehicle.id, docType: "Insurance", fileName: "insurance-policy.pdf", fileUrl: "/uploads/demo-insurance-policy.pdf", expiryDate: new Date(index === 1 ? "2026-06-25" : "2026-09-30") },
+        { vehicleId: vehicle.id, docType: "PUC", fileName: "puc-certificate.pdf", fileUrl: "/uploads/demo-puc-certificate.pdf", expiryDate: new Date("2026-12-30") },
+      ] });
+    }
+
+    const seededDrivers = await tx.driver.findMany({ select: { id: true, safetyScore: true } });
+    for (const driver of seededDrivers) {
+      await tx.safetyScoreEvent.deleteMany({ where: { driverId: driver.id } });
+      await tx.safetyScoreEvent.createMany({ data: [5, 4, 3, 2, 1].map((weeksAgo, index) => ({
+        driverId: driver.id,
+        score: Math.max(50, driver.safetyScore - 5 + index),
+        reason: index === 4 ? "Current safety review" : "Routine safety review",
+        recordedAt: new Date(Date.now() - weeksAgo * 7 * 24 * 60 * 60 * 1000),
+      })) });
     }
   });
 

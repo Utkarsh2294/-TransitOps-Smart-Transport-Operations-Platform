@@ -1,9 +1,10 @@
-import { Plus, RefreshCw, Save, Trash2, X } from "lucide-react";
+import { CheckSquare, Plus, RefreshCw, Save, Trash2, X } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { Button } from "../ui/Button";
+import { SafetySparkline } from "../ui/SafetySparkline";
 import { StatusBadge } from "../ui/StatusBadge";
-import { createDriver, deleteDriver, getDrivers, updateDriver } from "../../lib/drivers";
+import { bulkUpdateDriverStatus, createDriver, deleteDriver, getDrivers, getSafetyHistory, updateDriver } from "../../lib/drivers";
 import type { ApiErrorResponse } from "../../lib/api";
 import type { Driver, DriverFormValues, DriverStatus } from "../../types/driver";
 
@@ -78,6 +79,9 @@ export const DriverManagement = () => {
   const [serverError, setServerError] = useState<ApiErrorResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [bulkStatus, setBulkStatus] = useState<DriverStatus>("Available");
+  const [selectedTrend, setSelectedTrend] = useState<number[]>([]);
 
   const availableCount = useMemo(
     () => drivers.filter((driver) => driver.status === "Available").length,
@@ -121,6 +125,17 @@ export const DriverManagement = () => {
   useEffect(() => {
     void loadDrivers();
   }, []);
+
+  useEffect(() => {
+    if (!selectedDriver) {
+      setSelectedTrend([]);
+      return;
+    }
+
+    void getSafetyHistory(selectedDriver.id)
+      .then((response) => setSelectedTrend(response.data.map((event) => event.score)))
+      .catch(() => setSelectedTrend([]));
+  }, [selectedDriver?.id]);
 
   const handleFieldChange = (name: keyof DriverFormValues, value: string) => {
     setValues((current) => ({ ...current, [name]: value }));
@@ -188,6 +203,11 @@ export const DriverManagement = () => {
     }
   };
 
+  const applyBulkStatus = async () => {
+    if (!selectedIds.length || !window.confirm(`Change ${selectedIds.length} selected drivers to ${bulkStatus.replace("_", " ")}?`)) return;
+    setIsSaving(true); try { await bulkUpdateDriverStatus(selectedIds, bulkStatus); setSelectedIds([]); await loadDrivers(); } catch (error) { setServerError(error as ApiErrorResponse); } finally { setIsSaving(false); }
+  };
+
   return (
     <section className="mx-auto max-w-7xl px-4 py-7 lg:px-8">
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
@@ -206,6 +226,8 @@ export const DriverManagement = () => {
           </Button>
         </div>
       </div>
+
+      {selectedIds.length ? <div className="mb-4 flex flex-wrap items-center gap-3 rounded-[14px] border border-primary bg-panel px-4 py-3"><CheckSquare className="h-4 w-4 text-primary" /><span className="text-sm font-semibold">{selectedIds.length} selected</span><select className="h-9 rounded-md border border-border bg-background px-2 text-sm" onChange={(event) => setBulkStatus(event.target.value as DriverStatus)} value={bulkStatus}>{statuses.map((status) => <option key={status} value={status}>{status.replace("_", " ")}</option>)}</select><Button disabled={isSaving} onClick={() => void applyBulkStatus()} size="sm" type="button">Apply status</Button></div> : null}
 
       <div className="mb-6 grid gap-4 md:grid-cols-4">
         <div className="rounded-lg border border-border bg-raised p-5 shadow-card md:col-span-2 md:row-span-2">
@@ -263,6 +285,7 @@ export const DriverManagement = () => {
               <table className="w-full min-w-[820px] border-collapse text-left text-sm">
                 <thead className="bg-panel text-xs uppercase tracking-wide text-muted">
                   <tr>
+                    <th className="px-5 py-3 font-medium"><input aria-label="Select all drivers" checked={drivers.length > 0 && selectedIds.length === drivers.length} onChange={(event) => setSelectedIds(event.target.checked ? drivers.map((driver) => driver.id) : [])} type="checkbox" /></th>
                     <th className="px-5 py-3 font-medium">Driver</th>
                     <th className="px-5 py-3 font-medium">License</th>
                     <th className="px-5 py-3 font-medium">Expiry</th>
@@ -277,6 +300,7 @@ export const DriverManagement = () => {
                       key={driver.id}
                       onClick={() => startEdit(driver)}
                     >
+                      <td className="px-5 py-4" onClick={(event) => event.stopPropagation()}><input aria-label={`Select ${driver.name}`} checked={selectedIds.includes(driver.id)} onChange={(event) => setSelectedIds((current) => event.target.checked ? [...current, driver.id] : current.filter((id) => id !== driver.id))} type="checkbox" /></td>
                       <td className="px-5 py-4 font-semibold text-foreground">{driver.name}</td>
                       <td className="px-5 py-4 text-muted">{driver.licenseNumber}</td>
                       <td className="px-5 py-4 text-muted">
@@ -304,6 +328,12 @@ export const DriverManagement = () => {
                 {selectedDriver ? selectedDriver.licenseNumber : "Create a driver compliance record"}
               </p>
             </div>
+            {selectedDriver ? (
+              <div className="min-w-[96px] text-right">
+                <SafetySparkline scores={selectedTrend.length ? selectedTrend : [selectedDriver.safetyScore]} />
+                <p className="mt-1 text-xs font-semibold text-muted">{selectedDriver.safetyScore} current</p>
+              </div>
+            ) : null}
             {selectedDriver ? (
               <Button aria-label="Clear selected driver" onClick={startCreate} size="icon" type="button" variant="ghost">
                 <X className="h-4 w-4" />

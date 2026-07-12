@@ -1,11 +1,14 @@
-import { AlertTriangle, BadgeCheck, RefreshCw, ShieldAlert, UserRoundCheck } from "lucide-react";
+import { AlertTriangle, BadgeCheck, Download, RefreshCw, ShieldAlert, UserRoundCheck } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import type { ApiErrorResponse } from "../../lib/api";
-import { getDrivers, unsuspendDriver } from "../../lib/drivers";
+import { getDrivers, getSafetyHistory, unsuspendDriver } from "../../lib/drivers";
+import { downloadCompliancePdf, getComplianceAlerts } from "../../lib/safety";
+import type { ComplianceAlert } from "../../lib/safety";
 import type { Driver } from "../../types/driver";
 import { Button } from "../ui/Button";
 import { StatusBadge } from "../ui/StatusBadge";
+import { SafetySparkline } from "../ui/SafetySparkline";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -23,13 +26,18 @@ export const SafetyOfficerDashboard = () => {
   const [error, setError] = useState<ApiErrorResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<number | null>(null);
+  const [alerts, setAlerts] = useState<ComplianceAlert[]>([]);
+  const [trends, setTrends] = useState<Record<number, number[]>>({});
 
   const loadDrivers = async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await getDrivers(1, 100);
+      const [response, alertResponse] = await Promise.all([getDrivers(1, 100), getComplianceAlerts()]);
       setDrivers(response.data);
+      setAlerts(alertResponse.data);
+      const histories = await Promise.all(response.data.slice(0, 6).map(async (driver) => [driver.id, (await getSafetyHistory(driver.id)).data.map((event) => event.score)] as const));
+      setTrends(Object.fromEntries(histories));
     } catch (requestError) {
       setError(requestError as ApiErrorResponse);
     } finally {
@@ -59,6 +67,9 @@ export const SafetyOfficerDashboard = () => {
     () => drivers.length ? Math.round(drivers.reduce((total, driver) => total + driver.safetyScore, 0) / drivers.length) : 0,
     [drivers],
   );
+  const highAlerts = alerts.filter((alert) => alert.severity === "high");
+  const mediumAlerts = alerts.filter((alert) => alert.severity === "medium");
+  const lowAlerts = alerts.filter((alert) => alert.severity === "low");
 
   const handleUnsuspend = async (driverId: number) => {
     setUpdatingId(driverId);
@@ -81,13 +92,13 @@ export const SafetyOfficerDashboard = () => {
           <h2 className="mt-1 text-3xl font-semibold tracking-tight">Safety Officer</h2>
           <p className="mt-2 text-sm text-muted">License readiness, driver risk, and immediate compliance actions.</p>
         </div>
-        <Button onClick={() => void loadDrivers()} type="button" variant="outline"><RefreshCw className="mr-2 h-4 w-4" />Refresh</Button>
+        <div className="flex gap-2"><Button onClick={() => void downloadCompliancePdf()} type="button" variant="outline"><Download className="mr-2 h-4 w-4" />Export Compliance Report</Button><Button onClick={() => void loadDrivers()} type="button" variant="outline"><RefreshCw className="mr-2 h-4 w-4" />Refresh</Button></div>
       </div>
 
-      <div className="mb-6 grid gap-4 md:grid-cols-4">
-        <div className="rounded-lg border border-border bg-raised p-5 shadow-card md:col-span-2 md:row-span-2">
+      <div className="bento-grid mb-6">
+        <div className="bento-tile tile-2x2 bg-raised shadow-card">
           <div className="flex items-start justify-between gap-4">
-            <div><p className="text-sm text-muted">Compliance watchlist</p><p className="mt-3 text-5xl font-semibold tracking-tight">{expiringDrivers.length}</p></div>
+            <div><p className="text-sm text-muted">Needs attention today</p><p className={`mt-3 text-5xl font-semibold tracking-tight ${highAlerts.length ? "text-danger" : mediumAlerts.length ? "text-warning" : "text-success"}`}>{alerts.length}</p></div>
             <AlertTriangle className="h-5 w-5 text-warning" />
           </div>
           <div className="mt-8 grid grid-cols-2 gap-3">
@@ -95,12 +106,13 @@ export const SafetyOfficerDashboard = () => {
             <div className="rounded-md border border-border bg-surface p-3"><p className="text-xs uppercase tracking-wide text-muted">Avg safety</p><p className="mt-1 text-2xl font-semibold text-success">{averageScore}</p></div>
           </div>
         </div>
-        <div className="rounded-lg border border-border bg-surface p-5 shadow-card"><p className="text-sm text-muted">License expiry &lt; 30d</p><p className="mt-2 text-4xl font-semibold tracking-tight text-warning">{expiringDrivers.filter((driver) => daysUntil(driver.licenseExpiryDate) >= 0).length}</p></div>
-        <div className="rounded-lg border border-border bg-surface p-5 shadow-card"><p className="text-sm text-muted">Expired license</p><p className="mt-2 text-4xl font-semibold tracking-tight text-danger">{expiringDrivers.filter((driver) => daysUntil(driver.licenseExpiryDate) < 0).length}</p></div>
-        <div className="rounded-lg border border-border bg-surface p-5 shadow-card md:col-span-2"><p className="text-sm text-muted">Driver records monitored</p><p className="mt-2 text-2xl font-semibold tracking-tight">{drivers.length}</p></div>
+        <div className="bento-tile tile-1x1 bg-surface shadow-card"><p className="text-sm text-muted">License expiry &lt; 30d</p><p className="mt-2 text-4xl font-semibold tracking-tight text-warning">{expiringDrivers.filter((driver) => daysUntil(driver.licenseExpiryDate) >= 0).length}</p></div>
+        <div className="bento-tile tile-1x1 bg-surface shadow-card"><p className="text-sm text-muted">Expired license</p><p className="mt-2 text-4xl font-semibold tracking-tight text-danger">{expiringDrivers.filter((driver) => daysUntil(driver.licenseExpiryDate) < 0).length}</p></div>
+        <div className="bento-tile tile-2x1 bg-surface shadow-card"><p className="text-sm text-muted">Driver records monitored</p><p className="mt-2 text-2xl font-semibold tracking-tight">{drivers.length}</p></div>
       </div>
 
       {error ? <div className="mb-5 rounded-md border border-danger bg-background px-4 py-3 text-sm text-danger">{error.message}</div> : null}
+      <div className="mb-5 overflow-hidden rounded-[14px] border border-border bg-surface shadow-card"><div className="flex items-center justify-between border-b border-border px-5 py-4"><div><h3 className="font-semibold">Compliance alerts</h3><p className="mt-1 text-sm text-muted">{alerts.length ? `${alerts.length} items need attention today.` : "No compliance items need attention today."}</p></div><AlertTriangle className={highAlerts.length ? "h-5 w-5 text-danger" : "h-5 w-5 text-success"} /></div><div className="grid divide-y divide-border md:grid-cols-3 md:divide-x md:divide-y-0">{([ ["High", highAlerts], ["Medium", mediumAlerts], ["Low", lowAlerts] ] as const).map(([label, items]) => <div className="p-4" key={label}><p className="text-xs font-semibold uppercase tracking-wide text-muted">{label} ({items.length})</p>{items.length ? items.slice(0, 4).map((alert) => <div className="mt-3" key={`${alert.type}-${alert.entityId}-${alert.detail}`}><p className="truncate text-sm font-semibold">{alert.entityLabel}</p><p className="mt-0.5 line-clamp-2 text-xs text-muted">{alert.detail}</p></div>) : <p className="mt-5 text-sm text-muted">You’re clear.</p>}</div>)}</div></div>
 
       <div className="grid gap-5 xl:grid-cols-2">
         <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-card">
@@ -116,7 +128,7 @@ export const SafetyOfficerDashboard = () => {
           <div className="flex items-center justify-between border-b border-border px-5 py-4"><div><h3 className="font-semibold">Safety-score leaderboard</h3><p className="mt-1 text-sm text-muted">Highest score first across the driver bench.</p></div><ShieldAlert className="h-5 w-5 text-primary" /></div>
           <div className="divide-y divide-border">
             {isLoading ? Array.from({ length: 5 }).map((_, index) => <div className="m-4 h-12 animate-pulse rounded-md bg-panel" key={index} />) : null}
-            {!isLoading && safetyLeaderboard.map((driver, index) => <div className="flex items-center justify-between px-5 py-4" key={driver.id}><div className="flex items-center gap-3"><span className="flex h-7 w-7 items-center justify-center rounded-md bg-panel text-xs font-semibold text-muted">{index + 1}</span><div><p className="font-semibold">{driver.name}</p><p className="mt-1 text-xs text-muted">{driver.licenseCategory} · {driver.licenseNumber}</p></div></div><span className="text-lg font-semibold text-success">{driver.safetyScore}</span></div>)}
+            {!isLoading && safetyLeaderboard.map((driver, index) => <div className="flex items-center justify-between px-5 py-4" key={driver.id}><div className="flex items-center gap-3"><span className="flex h-7 w-7 items-center justify-center rounded-md bg-panel text-xs font-semibold text-muted">{index + 1}</span><div><p className="font-semibold">{driver.name}</p><p className="mt-1 text-xs text-muted">{driver.licenseCategory} · {driver.licenseNumber}</p></div></div><div className="flex items-center gap-3 text-success"><SafetySparkline scores={trends[driver.id] ?? []} /><span className="text-lg font-semibold">{driver.safetyScore}</span></div></div>)}
           </div>
         </div>
 

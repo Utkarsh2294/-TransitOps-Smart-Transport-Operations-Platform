@@ -2,6 +2,7 @@ import { Router } from "express";
 
 import {
   exportVehicleCostReportController,
+  exportCompliancePdfController,
   getFleetDashboardReportController,
   getVehicleCostReportController,
 } from "../controllers/reports.controller.js";
@@ -17,6 +18,7 @@ reportsRouter.get(
   requireRoles("fleet_manager", "financial_analyst"),
   asyncHandler(getFleetDashboardReportController),
 );
+reportsRouter.get("/compliance-pdf", requireRoles("fleet_manager", "safety_officer", "financial_analyst"), asyncHandler(exportCompliancePdfController));
 reportsRouter.get(
   "/vehicle-costs",
   requireRoles("fleet_manager", "financial_analyst"),

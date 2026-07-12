@@ -1,4 +1,5 @@
 import type { NextFunction, Request, Response } from "express";
+import { MulterError } from "multer";
 import { ZodError } from "zod";
 
 import { env } from "../config/env.js";
@@ -29,6 +30,20 @@ export const errorHandler = (
     });
   }
 
+  if (error instanceof MulterError) {
+    return res.status(400).json({
+      field: "file",
+      message: error.code === "LIMIT_FILE_SIZE" ? "File must be smaller than 5 MB" : error.message,
+    });
+  }
+
+  if (error instanceof Error && error.message.includes("Only PDF, JPG, and PNG")) {
+    return res.status(400).json({
+      field: "file",
+      message: error.message,
+    });
+  }
+
   console.error(error);
   return res.status(500).json({
     field: "server",
@@ -40,4 +55,3 @@ export const errorHandler = (
           : "Unknown server error",
   });
 };
-

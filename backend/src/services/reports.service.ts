@@ -1,6 +1,8 @@
 import { TripStatus, VehicleStatus } from "@prisma/client";
 
 import { prisma } from "../config/prisma.js";
+import PDFDocument from "pdfkit";
+import { getComplianceAlerts } from "./safety.service.js";
 
 type VehicleCostRow = {
   vehicleId: number;
@@ -214,4 +216,33 @@ export const getVehicleCostReportCsv = async () => {
       headers.map((header) => escapeCsv(row[header as keyof VehicleCostRow])).join(","),
     ),
   ].join("\n");
+};
+
+export const getCompliancePdf = async () => {
+  const [vehicles, drivers, maintenance, alerts] = await Promise.all([
+    prisma.vehicle.findMany({ orderBy: { regNumber: "asc" }, select: { regNumber: true, name: true, status: true } }),
+    prisma.driver.findMany({ orderBy: { name: "asc" }, select: { name: true, licenseNumber: true, licenseExpiryDate: true, status: true } }),
+    prisma.maintenanceLog.findMany({ where: { status: "Open" }, include: { vehicle: { select: { regNumber: true } } }, orderBy: { openedAt: "asc" } }),
+    getComplianceAlerts(),
+  ]);
+  const pdf = new PDFDocument({ margin: 42, size: "A4" });
+  const chunks: Buffer[] = [];
+  pdf.on("data", (chunk: Buffer) => chunks.push(chunk));
+  const done = new Promise<Buffer>((resolve, reject) => {
+    pdf.on("end", () => resolve(Buffer.concat(chunks)));
+    pdf.on("error", reject);
+  });
+  const title = (value: string) => { pdf.moveDown(0.8).fontSize(14).fillColor("#0f766e").text(value); pdf.moveDown(0.25).fillColor("#111827"); };
+  pdf.fontSize(22).fillColor("#111827").text("TransitOps Compliance Report");
+  pdf.fontSize(9).fillColor("#667085").text(`Generated ${new Date().toLocaleString("en-IN")}`);
+  title("Fleet roster");
+  vehicles.forEach((vehicle) => pdf.fontSize(9).text(`${vehicle.regNumber} | ${vehicle.name} | ${vehicle.status.replace("_", " ")}`));
+  title("Driver roster");
+  drivers.forEach((driver) => pdf.fontSize(9).text(`${driver.name} | ${driver.licenseNumber} | Expires ${driver.licenseExpiryDate.toLocaleDateString("en-IN")} | ${driver.status.replace("_", " ")}`));
+  title("Active maintenance");
+  maintenance.length ? maintenance.forEach((log) => pdf.fontSize(9).text(`${log.vehicle.regNumber} | ${log.type} | Opened ${log.openedAt.toLocaleDateString("en-IN")}`)) : pdf.fontSize(9).text("No active maintenance logs.");
+  title("Current alerts");
+  alerts.length ? alerts.forEach((alert) => pdf.fontSize(9).text(`[${alert.severity.toUpperCase()}] ${alert.entityLabel}: ${alert.detail}`)) : pdf.fontSize(9).text("No active compliance alerts.");
+  pdf.end();
+  return done;
 };

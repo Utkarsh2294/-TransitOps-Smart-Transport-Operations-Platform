@@ -9,6 +9,9 @@ export type Vehicle = {
   odometerKm: number;
   acquisitionCost: number;
   status: VehicleStatus;
+  serviceIntervalKm: number | null;
+  lastServiceOdometerKm: number | null;
+  documentCount: number;
   createdAt: string;
 };
 
@@ -20,7 +23,20 @@ export type VehicleFormValues = {
   odometerKm: string;
   acquisitionCost: string;
   status: VehicleStatus;
+  serviceIntervalKm: string;
 };
+
+export type VehicleDocument = {
+  id: number;
+  vehicleId: number;
+  docType: "RC" | "Insurance" | "PUC" | "Permit" | "Other";
+  fileUrl: string;
+  fileName: string;
+  expiryDate: string | null;
+  uploadedAt: string;
+};
+
+export type ServiceStatus = { dueInKm: number | null; isOverdue: boolean; isDueSoon: boolean; configured: boolean };
 
 export type VehicleListResponse = {
   data: Vehicle[];
