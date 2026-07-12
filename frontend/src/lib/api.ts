@@ -28,6 +28,13 @@ export const apiRequest = async <T>(path: string, init?: RequestInit): Promise<T
   });
 
   if (!response.ok) {
+    if (response.status === 401 && !path.includes("/auth/login") && !path.includes("/auth/register")) {
+      localStorage.removeItem("transitops_token");
+      localStorage.removeItem("transitops_user");
+      window.location.href = "/";
+      return Promise.reject(new Error("Unauthorized"));
+    }
+
     const error = (await response.json().catch(() => ({
       field: "request",
       message: "Request failed",
