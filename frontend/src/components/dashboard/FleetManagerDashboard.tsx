@@ -191,17 +191,17 @@ export const FleetManagerDashboard = () => {
                       {vehiclesNeedingAttention.map((vehicle) => (
                         <tr className="border-t border-border transition hover:bg-panel/70" key={vehicle.vehicleId}>
                           <td className="px-5 py-4">
-                            <p className="font-medium text-white">{vehicle.regNumber}</p>
+                            <p className="font-medium text-foreground">{vehicle.regNumber}</p>
                             <p className="mt-1 text-xs text-muted">{vehicle.name}</p>
                           </td>
                           <td className="px-5 py-4">
                             <StatusBadge status={vehicle.status} />
                           </td>
-                          <td className="px-5 py-4 text-slate-300">{vehicle.completedTrips}</td>
-                          <td className="px-5 py-4 font-medium text-white">
+                          <td className="px-5 py-4 text-muted">{vehicle.completedTrips}</td>
+                          <td className="px-5 py-4 font-medium text-foreground">
                             {formatCurrency(vehicle.totalOperationalCost)}
                           </td>
-                          <td className="px-5 py-4 text-slate-300">
+                          <td className="px-5 py-4 text-muted">
                             {formatMetric(vehicle.fuelEfficiencyKmPerLiter, " km/L")}
                           </td>
                         </tr>
@@ -257,10 +257,10 @@ export const FleetManagerDashboard = () => {
                       <div className="rounded-md border border-border bg-background p-3" key={vehicle.vehicleId}>
                         <div className="flex items-start justify-between gap-3">
                           <div>
-                            <p className="font-medium text-white">{vehicle.regNumber}</p>
+                            <p className="font-medium text-foreground">{vehicle.regNumber}</p>
                             <p className="mt-1 text-xs text-muted">{vehicle.name}</p>
                           </div>
-                          <p className="text-sm font-semibold text-white">
+                          <p className="text-sm font-semibold text-foreground">
                             {formatCurrency(vehicle.totalOperationalCost)}
                           </p>
                         </div>
@@ -292,7 +292,7 @@ export const FleetManagerDashboard = () => {
                   </p>
                 </div>
               </div>
-              <p className="text-sm leading-6 text-slate-200">
+              <p className="text-sm leading-6 text-foreground">
                 {insights?.briefing ?? "No briefing available yet."}
               </p>
               <div className="mt-4 space-y-2">
@@ -300,7 +300,7 @@ export const FleetManagerDashboard = () => {
                   <div className="rounded-md border border-border bg-background p-3" key={`${action.label}-${action.detail}`}>
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="font-medium text-white">{action.label}</p>
+                        <p className="font-medium text-foreground">{action.label}</p>
                         <p className="mt-1 text-xs text-muted">{action.detail}</p>
                       </div>
                       <span className="rounded-full border border-border px-2 py-1 text-[11px] uppercase tracking-wide text-muted">

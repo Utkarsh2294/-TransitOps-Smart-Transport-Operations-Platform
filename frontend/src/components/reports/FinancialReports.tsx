@@ -170,22 +170,22 @@ export const FinancialReports = () => {
                   {vehicleCosts.map((row) => (
                     <tr className="border-t border-border transition hover:bg-panel/70" key={row.vehicleId}>
                       <td className="px-5 py-4">
-                        <p className="font-medium text-white">{row.regNumber}</p>
+                        <p className="font-medium text-foreground">{row.regNumber}</p>
                         <p className="mt-1 text-xs text-muted">{row.name}</p>
                       </td>
                       <td className="px-5 py-4">
                         <StatusBadge status={row.status} />
                       </td>
-                      <td className="px-5 py-4 text-slate-300">{formatCurrency(row.fuelCost)}</td>
-                      <td className="px-5 py-4 text-slate-300">{formatCurrency(row.maintenanceCost)}</td>
-                      <td className="px-5 py-4 text-slate-300">{formatCurrency(row.expenseCost)}</td>
-                      <td className="px-5 py-4 font-medium text-white">
+                      <td className="px-5 py-4 text-muted">{formatCurrency(row.fuelCost)}</td>
+                      <td className="px-5 py-4 text-muted">{formatCurrency(row.maintenanceCost)}</td>
+                      <td className="px-5 py-4 text-muted">{formatCurrency(row.expenseCost)}</td>
+                      <td className="px-5 py-4 font-medium text-foreground">
                         {formatCurrency(row.totalOperationalCost)}
                       </td>
-                      <td className="px-5 py-4 text-slate-300">
+                      <td className="px-5 py-4 text-muted">
                         {formatMetric(row.fuelEfficiencyKmPerLiter, " km/L")}
                       </td>
-                      <td className="px-5 py-4 text-slate-300">{formatMetric(row.roiPercent, "%")}</td>
+                      <td className="px-5 py-4 text-muted">{formatMetric(row.roiPercent, "%")}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -213,10 +213,10 @@ export const FinancialReports = () => {
                 <div className="rounded-md border border-border bg-background p-3" key={vehicle.vehicleId}>
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-medium text-white">{vehicle.regNumber}</p>
+                      <p className="font-medium text-foreground">{vehicle.regNumber}</p>
                       <p className="mt-1 text-xs text-muted">{vehicle.name}</p>
                     </div>
-                    <p className="text-sm font-semibold text-white">
+                    <p className="text-sm font-semibold text-foreground">
                       {formatCurrency(vehicle.totalOperationalCost)}
                     </p>
                   </div>

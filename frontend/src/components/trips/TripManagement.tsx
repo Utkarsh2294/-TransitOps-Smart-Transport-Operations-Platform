@@ -28,10 +28,10 @@ const formatNumber = (value: number) =>
   new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value);
 
 const tripStatusClasses = {
-  Draft: "border-slate-500/30 bg-slate-500/10 text-slate-300",
-  Dispatched: "border-info/30 bg-info/10 text-blue-300",
-  Completed: "border-success/30 bg-success/10 text-green-300",
-  Cancelled: "border-danger/30 bg-danger/10 text-red-300",
+  Draft: "border-muted/30 bg-muted/10 text-muted",
+  Dispatched: "border-info/30 bg-info/10 text-info",
+  Completed: "border-success/30 bg-success/10 text-success",
+  Cancelled: "border-danger/30 bg-danger/10 text-danger",
 };
 
 const validateTrip = (values: TripFormValues) => {
@@ -64,12 +64,12 @@ const Field = ({ error, label, name, onChange, type = "text", value }: FieldProp
   <label className="block">
     <span className="text-xs font-medium uppercase tracking-wide text-muted">{label}</span>
     <input
-      className="mt-2 h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none transition placeholder:text-slate-600 focus:border-primary"
+      className="mt-2 h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-primary"
       onChange={(event) => onChange(name, event.target.value)}
       type={type}
       value={value}
     />
-    {error ? <span className="mt-1 block text-xs text-red-300">{error}</span> : null}
+    {error ? <span className="mt-1 block text-xs text-danger">{error}</span> : null}
   </label>
 );
 
@@ -262,13 +262,13 @@ export const TripManagement = () => {
                       onClick={() => setSelectedTrip(trip)}
                     >
                       <td className="px-5 py-4">
-                        <p className="font-medium text-white">{trip.source}</p>
+                        <p className="font-medium text-foreground">{trip.source}</p>
                         <p className="mt-1 text-xs text-muted">to {trip.destination}</p>
                       </td>
-                      <td className="px-5 py-4 text-slate-300">{getVehicleLabel(trip.vehicleId)}</td>
-                      <td className="px-5 py-4 text-slate-300">{getDriverLabel(trip.driverId)}</td>
-                      <td className="px-5 py-4 text-slate-300">{formatNumber(trip.cargoWeightKg)} kg</td>
-                      <td className="px-5 py-4 text-slate-300">{formatNumber(trip.plannedDistanceKm)} km</td>
+                      <td className="px-5 py-4 text-muted">{getVehicleLabel(trip.vehicleId)}</td>
+                      <td className="px-5 py-4 text-muted">{getDriverLabel(trip.driverId)}</td>
+                      <td className="px-5 py-4 text-muted">{formatNumber(trip.cargoWeightKg)} kg</td>
+                      <td className="px-5 py-4 text-muted">{formatNumber(trip.plannedDistanceKm)} km</td>
                       <td className="px-5 py-4">
                         <TripStatusBadge status={trip.status} />
                       </td>
@@ -309,7 +309,7 @@ export const TripManagement = () => {
                     </option>
                   ))}
                 </select>
-                {errors.vehicleId ? <span className="mt-1 block text-xs text-red-300">{errors.vehicleId}</span> : null}
+                {errors.vehicleId ? <span className="mt-1 block text-xs text-danger">{errors.vehicleId}</span> : null}
               </label>
               <label className="block">
                 <span className="text-xs font-medium uppercase tracking-wide text-muted">Driver</span>
@@ -325,7 +325,7 @@ export const TripManagement = () => {
                     </option>
                   ))}
                 </select>
-                {errors.driverId ? <span className="mt-1 block text-xs text-red-300">{errors.driverId}</span> : null}
+                {errors.driverId ? <span className="mt-1 block text-xs text-danger">{errors.driverId}</span> : null}
               </label>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field

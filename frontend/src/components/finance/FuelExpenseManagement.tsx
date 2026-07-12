@@ -293,7 +293,7 @@ export const FuelExpenseManagement = () => {
                 value={expenseValues.date}
               />
               <textarea
-                className="min-h-20 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition placeholder:text-slate-600 focus:border-primary"
+                className="min-h-20 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-primary"
                 onChange={(event) => setExpenseValues((current) => ({ ...current, note: event.target.value }))}
                 placeholder="Note"
                 value={expenseValues.note}
@@ -331,10 +331,10 @@ export const FuelExpenseManagement = () => {
                   <tbody>
                     {fuelLogs.map((fuelLog) => (
                       <tr className="border-t border-border" key={fuelLog.id}>
-                        <td className="px-5 py-4 font-medium text-white">{getVehicleLabel(fuelLog.vehicleId)}</td>
-                        <td className="px-5 py-4 text-slate-300">{formatNumber(fuelLog.liters)} L</td>
-                        <td className="px-5 py-4 text-slate-300">{formatCurrency(fuelLog.cost)}</td>
-                        <td className="px-5 py-4 text-slate-300">
+                        <td className="px-5 py-4 font-medium text-foreground">{getVehicleLabel(fuelLog.vehicleId)}</td>
+                        <td className="px-5 py-4 text-muted">{formatNumber(fuelLog.liters)} L</td>
+                        <td className="px-5 py-4 text-muted">{formatCurrency(fuelLog.cost)}</td>
+                        <td className="px-5 py-4 text-muted">
                           {new Date(fuelLog.date).toLocaleDateString("en-IN")}
                         </td>
                       </tr>
@@ -362,10 +362,10 @@ export const FuelExpenseManagement = () => {
                 <tbody>
                   {expenses.map((expense) => (
                     <tr className="border-t border-border" key={expense.id}>
-                      <td className="px-5 py-4 font-medium text-white">{getVehicleLabel(expense.vehicleId)}</td>
-                      <td className="px-5 py-4 text-slate-300">{expense.category}</td>
-                      <td className="px-5 py-4 text-slate-300">{formatCurrency(expense.amount)}</td>
-                      <td className="px-5 py-4 text-slate-300">
+                      <td className="px-5 py-4 font-medium text-foreground">{getVehicleLabel(expense.vehicleId)}</td>
+                      <td className="px-5 py-4 text-muted">{expense.category}</td>
+                      <td className="px-5 py-4 text-muted">{formatCurrency(expense.amount)}</td>
+                      <td className="px-5 py-4 text-muted">
                         {new Date(expense.date).toLocaleDateString("en-IN")}
                       </td>
                     </tr>

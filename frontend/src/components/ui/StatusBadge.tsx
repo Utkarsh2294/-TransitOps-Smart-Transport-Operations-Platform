@@ -14,7 +14,11 @@ type StatusBadgeProps = {
     | "Open"
     | "Closed"
     | "Retired"
-    | "Suspended";
+    | "Suspended"
+    | "Draft"
+    | "Dispatched"
+    | "Completed"
+    | "Cancelled";
 };
 
 const statusTokens: Record<StatusBadgeProps["status"], string> = {
@@ -29,6 +33,10 @@ const statusTokens: Record<StatusBadgeProps["status"], string> = {
   Closed: "var(--status-success)",
   Retired: "var(--status-danger)",
   Suspended: "var(--status-danger)",
+  Draft: "var(--text-secondary)",
+  Dispatched: "var(--status-info)",
+  Completed: "var(--status-success)",
+  Cancelled: "var(--status-danger)",
 };
 
 export const StatusBadge = ({ status }: StatusBadgeProps) => {

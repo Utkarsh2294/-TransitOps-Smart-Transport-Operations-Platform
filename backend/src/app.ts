@@ -5,6 +5,7 @@ import morgan from "morgan";
 
 import { env } from "./config/env.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
+import { authRouter } from "./routes/auth.routes.js";
 import { driversRouter } from "./routes/drivers.routes.js";
 import { financeRouter } from "./routes/finance.routes.js";
 import { healthRouter } from "./routes/health.routes.js";
@@ -32,6 +33,7 @@ export const createApp = () => {
   app.use(morgan(env.NODE_ENV === "production" ? "combined" : "dev"));
 
   app.use("/api/health", healthRouter);
+  app.use("/api/auth", authRouter);
   app.use("/uploads", express.static(uploadsPath));
   app.use("/api/drivers", driversRouter);
   app.use("/api/finance", financeRouter);

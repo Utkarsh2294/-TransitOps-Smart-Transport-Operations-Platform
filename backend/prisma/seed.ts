@@ -1,6 +1,30 @@
+import bcrypt from "bcryptjs";
+
 import { prisma } from "../src/config/prisma.js";
 
 const seed = async () => {
+  const demoPasswordHash = await bcrypt.hash("TransitOps2026!", 12);
+
+  // ── Demo users (all 4 roles) ──────────────────────────────────────
+  const users = [
+    { name: "Priya Sharma", email: "admin@transitops.in", role: "fleet_manager" as const },
+    { name: "Aarav Mehta", email: "driver@transitops.in", role: "driver" as const },
+    { name: "Neha Kapoor", email: "safety@transitops.in", role: "safety_officer" as const },
+    { name: "Ravi Kumar", email: "finance@transitops.in", role: "financial_analyst" as const },
+  ];
+  const seededUsers: { id: number; role: string }[] = [];
+  for (const user of users) {
+    const seeded = await prisma.user.upsert({
+      where: { email: user.email },
+      update: { name: user.name, passwordHash: demoPasswordHash, role: user.role },
+      create: { name: user.name, email: user.email, passwordHash: demoPasswordHash, role: user.role },
+    });
+    seededUsers.push({ id: seeded.id, role: seeded.role });
+  }
+  const fleetManagerId = seededUsers.find((u) => u.role === "fleet_manager")!.id;
+  console.log("Seeded 4 demo users (password: TransitOps2026!)");
+
+  // ── Vehicles ──────────────────────────────────────────────────────
   const vehicles = [
     ["KA01AB1234", "City Freight 01", "Truck", "12000", "25000", "3800000", "Available"],
     ["KA02CD4321", "North Line Cargo", "Truck", "16000", "41000", "4650000", "Available"],
@@ -19,6 +43,7 @@ const seed = async () => {
     ["PB10DS0198", "Punjab Agro Carrier", "Truck", "11000", "28000", "3400000", "Available"],
   ] as const;
 
+  // ── Drivers ───────────────────────────────────────────────────────
   const drivers = [
     ["Aarav Mehta", "DL-KA-2026-001", "HMV", "2027-12-31", "+91 98765 43210", 94, "Available"],
     ["Ishaan Rao", "DL-KA-2026-002", "HMV", "2026-08-03", "+91 98765 43211", 88, "Available"],
@@ -38,6 +63,7 @@ const seed = async () => {
   ] as const;
 
   await prisma.$transaction(async (tx) => {
+    // ── Upsert vehicles ───────────────────────────────────────────
     for (const vehicle of vehicles) {
       const [regNumber, name, type, maxLoadCapacityKg, odometerKm, acquisitionCost, status] = vehicle;
       await tx.vehicle.upsert({
@@ -47,31 +73,17 @@ const seed = async () => {
       });
     }
 
+    // ── Upsert drivers ────────────────────────────────────────────
     for (const driver of drivers) {
-      const [name, licenseNumber, licenseCategory, licenseExpiryDate, contactNumber, safetyScore, status] =
-        driver;
+      const [name, licenseNumber, licenseCategory, licenseExpiryDate, contactNumber, safetyScore, status] = driver;
       await tx.driver.upsert({
         where: { licenseNumber },
-        update: {
-          name,
-          licenseCategory,
-          licenseExpiryDate: new Date(licenseExpiryDate),
-          contactNumber,
-          safetyScore,
-          status,
-        },
-        create: {
-          name,
-          licenseNumber,
-          licenseCategory,
-          licenseExpiryDate: new Date(licenseExpiryDate),
-          contactNumber,
-          safetyScore,
-          status,
-        },
+        update: { name, licenseCategory, licenseExpiryDate: new Date(licenseExpiryDate), contactNumber, safetyScore, status },
+        create: { name, licenseNumber, licenseCategory, licenseExpiryDate: new Date(licenseExpiryDate), contactNumber, safetyScore, status },
       });
     }
 
+    // ── Seed vehicle documents ────────────────────────────────────
     const seededVehicles = await tx.vehicle.findMany({ take: 4, orderBy: { id: "asc" } });
     for (const [index, vehicle] of seededVehicles.entries()) {
       await tx.vehicleDocument.deleteMany({ where: { vehicleId: vehicle.id } });
@@ -82,6 +94,7 @@ const seed = async () => {
       ] });
     }
 
+    // ── Seed safety score events ──────────────────────────────────
     const seededDrivers = await tx.driver.findMany({ select: { id: true, safetyScore: true } });
     for (const driver of seededDrivers) {
       await tx.safetyScoreEvent.deleteMany({ where: { driverId: driver.id } });
@@ -92,6 +105,133 @@ const seed = async () => {
         recordedAt: new Date(Date.now() - weeksAgo * 7 * 24 * 60 * 60 * 1000),
       })) });
     }
+
+    // ── Seed trips (12 across all statuses) ───────────────────────
+    const allVehicles = await tx.vehicle.findMany({ orderBy: { id: "asc" } });
+    const allDrivers = await tx.driver.findMany({ orderBy: { id: "asc" } });
+    await tx.trip.deleteMany({});
+
+    const tripData = [
+      // 4 Completed trips
+      { source: "Mumbai", destination: "Pune", vIdx: 0, dIdx: 0, cargo: 8000, dist: 150, status: "Completed", finalOdo: 25150, fuel: 22 },
+      { source: "Delhi", destination: "Jaipur", vIdx: 3, dIdx: 3, cargo: 2800, dist: 280, status: "Completed", finalOdo: 18280, fuel: 35 },
+      { source: "Chennai", destination: "Bangalore", vIdx: 7, dIdx: 7, cargo: 2200, dist: 350, status: "Completed", finalOdo: 12350, fuel: 42 },
+      { source: "Ahmedabad", destination: "Surat", vIdx: 5, dIdx: 5, cargo: 18000, dist: 260, status: "Completed", finalOdo: 89260, fuel: 48 },
+      // 3 Dispatched trips (vehicle/driver On_Trip)
+      { source: "Mumbai", destination: "Nagpur", vIdx: 2, dIdx: 2, cargo: 15000, dist: 800, status: "Dispatched" },
+      { source: "Lucknow", destination: "Varanasi", vIdx: 9, dIdx: 9, cargo: 2500, dist: 320, status: "Dispatched" },
+      // 3 Draft trips
+      { source: "Kolkata", destination: "Patna", vIdx: 10, dIdx: 10, cargo: 9000, dist: 590, status: "Draft" },
+      { source: "Chandigarh", destination: "Amritsar", vIdx: 14, dIdx: 13, cargo: 7500, dist: 230, status: "Draft" },
+      { source: "Hyderabad", destination: "Vizag", vIdx: 8, dIdx: 8, cargo: 6000, dist: 620, status: "Draft" },
+      // 2 Cancelled trips
+      { source: "Guwahati", destination: "Shillong", vIdx: 13, dIdx: 12, cargo: 20000, dist: 100, status: "Cancelled" },
+      { source: "Bhopal", destination: "Indore", vIdx: 12, dIdx: 11, cargo: 2000, dist: 195, status: "Cancelled" },
+      // 1 more completed for driver role
+      { source: "Kochi", destination: "Trivandrum", vIdx: 10, dIdx: 0, cargo: 10000, dist: 200, status: "Completed", finalOdo: 39200, fuel: 28 },
+    ];
+
+    for (const trip of tripData) {
+      const v = allVehicles[trip.vIdx];
+      const d = allDrivers[trip.dIdx];
+      if (!v || !d) continue;
+      await tx.trip.create({
+        data: {
+          source: trip.source,
+          destination: trip.destination,
+          vehicleId: v.id,
+          driverId: d.id,
+          cargoWeightKg: trip.cargo,
+          plannedDistanceKm: trip.dist,
+          status: trip.status as "Draft" | "Dispatched" | "Completed" | "Cancelled",
+          createdById: fleetManagerId,
+          finalOdometerKm: trip.finalOdo ?? null,
+          fuelConsumedLiters: trip.fuel ?? null,
+        },
+      });
+    }
+    console.log(`Seeded ${tripData.length} trips.`);
+
+    // ── Seed fuel logs ────────────────────────────────────────────
+    await tx.fuelLog.deleteMany({});
+    const fuelData = [
+      { vIdx: 0, liters: 55, cost: 5775, daysAgo: 10 },
+      { vIdx: 0, liters: 48, cost: 5040, daysAgo: 3 },
+      { vIdx: 2, liters: 120, cost: 12600, daysAgo: 7 },
+      { vIdx: 3, liters: 35, cost: 3675, daysAgo: 5 },
+      { vIdx: 5, liters: 95, cost: 9975, daysAgo: 14 },
+      { vIdx: 7, liters: 28, cost: 2940, daysAgo: 2 },
+      { vIdx: 9, liters: 42, cost: 4410, daysAgo: 8 },
+      { vIdx: 10, liters: 65, cost: 6825, daysAgo: 12 },
+      { vIdx: 14, liters: 50, cost: 5250, daysAgo: 6 },
+      { vIdx: 8, liters: 70, cost: 7350, daysAgo: 4 },
+    ];
+    for (const fuel of fuelData) {
+      const v = allVehicles[fuel.vIdx];
+      if (!v) continue;
+      await tx.fuelLog.create({
+        data: {
+          vehicleId: v.id,
+          liters: fuel.liters,
+          cost: fuel.cost,
+          date: new Date(Date.now() - fuel.daysAgo * 24 * 60 * 60 * 1000),
+        },
+      });
+    }
+    console.log(`Seeded ${fuelData.length} fuel logs.`);
+
+    // ── Seed expenses ─────────────────────────────────────────────
+    await tx.expense.deleteMany({});
+    const expenseData = [
+      { vIdx: 0, category: "toll" as const, amount: 1200, note: "Mumbai-Pune expressway toll", daysAgo: 10 },
+      { vIdx: 2, category: "toll" as const, amount: 3500, note: "Mumbai-Nagpur highway tolls", daysAgo: 7 },
+      { vIdx: 3, category: "fine" as const, amount: 2000, note: "Overweight penalty", daysAgo: 20 },
+      { vIdx: 5, category: "toll" as const, amount: 1800, note: "Ahmedabad-Surat toll", daysAgo: 14 },
+      { vIdx: 9, category: "other" as const, amount: 800, note: "Parking charges", daysAgo: 3 },
+      { vIdx: 10, category: "toll" as const, amount: 950, note: "Kochi bypass toll", daysAgo: 12 },
+      { vIdx: 14, category: "fine" as const, amount: 1500, note: "Speed violation fine", daysAgo: 18 },
+      { vIdx: 7, category: "other" as const, amount: 450, note: "Vehicle cleaning", daysAgo: 1 },
+    ];
+    for (const exp of expenseData) {
+      const v = allVehicles[exp.vIdx];
+      if (!v) continue;
+      await tx.expense.create({
+        data: {
+          vehicleId: v.id,
+          category: exp.category,
+          amount: exp.amount,
+          note: exp.note,
+          date: new Date(Date.now() - exp.daysAgo * 24 * 60 * 60 * 1000),
+        },
+      });
+    }
+    console.log(`Seeded ${expenseData.length} expenses.`);
+
+    // ── Seed maintenance logs ─────────────────────────────────────
+    await tx.maintenanceLog.deleteMany({});
+    const maintenanceData = [
+      { vIdx: 4, type: "Engine overhaul", cost: 45000, status: "Open" as const, daysAgo: 5 },
+      { vIdx: 11, type: "Brake pad replacement", cost: 12000, status: "Open" as const, daysAgo: 3 },
+      { vIdx: 0, type: "Oil change", cost: 3500, status: "Closed" as const, daysAgo: 30, closedDaysAgo: 28 },
+      { vIdx: 3, type: "Tyre replacement", cost: 24000, status: "Closed" as const, daysAgo: 45, closedDaysAgo: 42 },
+      { vIdx: 5, type: "AC repair", cost: 8500, status: "Closed" as const, daysAgo: 20, closedDaysAgo: 17 },
+      { vIdx: 10, type: "Suspension repair", cost: 15000, status: "Closed" as const, daysAgo: 60, closedDaysAgo: 55 },
+    ];
+    for (const maint of maintenanceData) {
+      const v = allVehicles[maint.vIdx];
+      if (!v) continue;
+      await tx.maintenanceLog.create({
+        data: {
+          vehicleId: v.id,
+          type: maint.type,
+          cost: maint.cost,
+          status: maint.status,
+          openedAt: new Date(Date.now() - maint.daysAgo * 24 * 60 * 60 * 1000),
+          closedAt: maint.closedDaysAgo ? new Date(Date.now() - maint.closedDaysAgo * 24 * 60 * 60 * 1000) : null,
+        },
+      });
+    }
+    console.log(`Seeded ${maintenanceData.length} maintenance logs.`);
   });
 
   console.log(`Seeded ${vehicles.length} vehicles and ${drivers.length} drivers.`);

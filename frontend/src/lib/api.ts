@@ -7,12 +7,21 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000
 const DEMO_TOKEN = import.meta.env.VITE_DEMO_TOKEN;
 const API_ORIGIN = API_BASE_URL.replace(/\/api\/?$/, "");
 
+const resolveToken = (): string | null => {
+  try {
+    const stored = localStorage.getItem("transitops_token");
+    if (stored) return stored;
+  } catch { /* SSR guard */ }
+  return DEMO_TOKEN ?? null;
+};
+
 export const apiRequest = async <T>(path: string, init?: RequestInit): Promise<T> => {
   const isFormData = init?.body instanceof FormData;
+  const token = resolveToken();
   const response = await fetch(`${API_BASE_URL}${path}`, {
     headers: {
       ...(isFormData ? {} : { "Content-Type": "application/json" }),
-      ...(DEMO_TOKEN ? { Authorization: `Bearer ${DEMO_TOKEN}` } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...init?.headers,
     },
     ...init,
