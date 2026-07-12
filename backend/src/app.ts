@@ -5,17 +5,19 @@ import morgan from "morgan";
 
 import { env } from "./config/env.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
+import { driversRouter } from "./routes/drivers.routes.js";
 import { healthRouter } from "./routes/health.routes.js";
 import { tripRouter } from "./routes/trip.routes.js";
 import { vehiclesRouter } from "./routes/vehicles.routes.js";
 
 export const createApp = () => {
   const app = express();
+  const corsOrigins = env.CORS_ORIGIN.split(",").map((origin) => origin.trim());
 
   app.use(helmet());
   app.use(
     cors({
-      origin: env.CORS_ORIGIN,
+      origin: corsOrigins,
       credentials: true,
     }),
   );
@@ -23,6 +25,7 @@ export const createApp = () => {
   app.use(morgan(env.NODE_ENV === "production" ? "combined" : "dev"));
 
   app.use("/api/health", healthRouter);
+  app.use("/api/drivers", driversRouter);
   app.use("/api/trips", tripRouter);
   app.use("/api/vehicles", vehiclesRouter);
 
