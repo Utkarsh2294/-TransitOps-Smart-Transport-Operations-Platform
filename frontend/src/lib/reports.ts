@@ -13,10 +13,10 @@ export const getVehicleCostReport = () =>
 
 export const downloadVehicleCostReportCsv = async () => {
   const baseUrl = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000/api";
-  const demoToken = import.meta.env.VITE_DEMO_TOKEN;
+  const token = localStorage.getItem("transitops_token") ?? import.meta.env.VITE_DEMO_TOKEN;
   const response = await fetch(`${baseUrl}/reports/vehicle-costs.csv`, {
     headers: {
-      ...(demoToken ? { Authorization: `Bearer ${demoToken}` } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
   });
 

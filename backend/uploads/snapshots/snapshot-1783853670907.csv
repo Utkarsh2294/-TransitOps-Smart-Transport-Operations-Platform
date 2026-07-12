@@ -1,0 +1,16 @@
+vehicleId,regNumber,name,status,fuelLiters,fuelCost,maintenanceCost,expenseCost,totalOperationalCost,completedTrips,completedDistanceKm,fuelEfficiencyKmPerLiter,roiPercent
+9,AP31MN6204,Eastern Cold Chain,Available,70,7350,0,0,7350,0,0,,-0.14
+4,DL01LM7788,Capital Shuttle,Available,35,3675,24000,2000,29675,1,280,8,-2.37
+6,GJ05PL5512,Port Connector,Available,95,9975,8500,1800,20275,1,260,2.74,-0.25
+13,HR26BT9088,Gurgaon Rapid,Available,0,0,0,0,0,0,0,,0
+1,KA01AB1234,City Freight 01,Available,103,10815,3500,1200,15515,1,150,6.82,-0.41
+2,KA02CD4321,North Line Cargo,Available,0,0,0,0,0,0,0,,0
+11,KL07FR7820,Green Corridor,Available,65,6825,15000,950,22775,1,200,7.14,-0.58
+3,MH12TR9087,Western Express,On_Trip,120,12600,0,3500,16100,0,0,,-0.22
+14,MP09CV4512,Central Bulk Mover,Available,0,0,0,0,0,0,0,,0
+15,PB10DS0198,Punjab Agro Carrier,Available,50,5250,0,1500,6750,0,0,,-0.2
+7,RJ14QW9081,Desert Carrier,Retired,0,0,0,0,0,0,0,,0
+5,TN09ZX2211,Coastal Hauler,In_Shop,0,0,45000,0,45000,0,0,,-1.07
+8,TS07UV4409,Metro Supply Van,Available,28,2940,0,450,3390,1,350,8.33,-0.35
+10,UP16GH3345,Express Parcel 16,On_Trip,42,4410,0,800,5210,0,0,,-0.44
+12,WB20TY6719,Riverfront Logistics,In_Shop,0,0,12000,0,12000,0,0,,-0.27

@@ -185,7 +185,7 @@ export const FuelExpenseManagement = () => {
       </div>
 
       {serverError ? (
-        <div className="mb-6 rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-red-200">
+        <div className="mb-6 rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger">
           {serverError.message}
         </div>
       ) : null}
