@@ -61,12 +61,12 @@ const Field = ({ error, label, name, onChange, type = "text", value }: FieldProp
   <label className="block">
     <span className="text-xs font-medium uppercase tracking-wide text-muted">{label}</span>
     <input
-      className="mt-2 h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none transition placeholder:text-slate-600 focus:border-primary"
+      className="mt-2 h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary"
       onChange={(event) => onChange(name, event.target.value)}
       type={type}
       value={value}
     />
-    {error ? <span className="mt-1 block text-xs text-red-300">{error}</span> : null}
+    {error ? <span className="mt-1 block text-xs text-danger">{error}</span> : null}
   </label>
 );
 
@@ -91,6 +91,14 @@ export const DriverManagement = () => {
       const expiry = new Date(driver.licenseExpiryDate);
       return expiry > now && expiry <= thirtyDays;
     }).length;
+  }, [drivers]);
+  const suspendedCount = useMemo(
+    () => drivers.filter((driver) => driver.status === "Suspended").length,
+    [drivers],
+  );
+  const averageSafetyScore = useMemo(() => {
+    if (drivers.length === 0) return 0;
+    return Math.round(drivers.reduce((total, driver) => total + driver.safetyScore, 0) / drivers.length);
   }, [drivers]);
 
   const loadDrivers = async () => {
@@ -181,11 +189,11 @@ export const DriverManagement = () => {
   };
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-6 lg:px-8">
+    <section className="mx-auto max-w-7xl px-4 py-7 lg:px-8">
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-sm text-muted">Fleet & Compliance</p>
-          <h2 className="mt-1 text-2xl font-semibold">Driver Management</h2>
+          <p className="text-sm font-medium text-primary">Fleet & Compliance</p>
+          <h2 className="mt-1 text-3xl font-semibold tracking-tight">Driver Management</h2>
         </div>
         <div className="flex items-center gap-2">
           <Button onClick={() => void loadDrivers()} type="button" variant="outline">
@@ -199,23 +207,42 @@ export const DriverManagement = () => {
         </div>
       </div>
 
-      <div className="mb-6 grid gap-4 md:grid-cols-3">
-        <div className="rounded-lg border border-border bg-surface p-5 shadow-glow">
-          <p className="text-sm text-muted">Total Drivers</p>
-          <p className="mt-2 text-3xl font-semibold">{drivers.length}</p>
+      <div className="mb-6 grid gap-4 md:grid-cols-4">
+        <div className="rounded-lg border border-border bg-raised p-5 shadow-card md:col-span-2 md:row-span-2">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm text-muted">Driver Bench</p>
+              <p className="mt-3 text-5xl font-semibold tracking-tight">{drivers.length}</p>
+            </div>
+            <StatusBadge status="Available" />
+          </div>
+          <div className="mt-8 grid grid-cols-2 gap-3">
+            <div className="rounded-md border border-border bg-surface p-3">
+              <p className="text-xs uppercase tracking-wide text-muted">Available</p>
+              <p className="mt-1 text-2xl font-semibold text-success">{availableCount}</p>
+            </div>
+            <div className="rounded-md border border-border bg-surface p-3">
+              <p className="text-xs uppercase tracking-wide text-muted">Avg Safety</p>
+              <p className="mt-1 text-2xl font-semibold">{averageSafetyScore}</p>
+            </div>
+          </div>
         </div>
-        <div className="rounded-lg border border-border bg-surface p-5">
+        <div className="rounded-lg border border-border bg-surface p-5 shadow-card">
           <p className="text-sm text-muted">Available</p>
-          <p className="mt-2 text-3xl font-semibold">{availableCount}</p>
+          <p className="mt-2 text-4xl font-semibold tracking-tight text-success">{availableCount}</p>
         </div>
-        <div className="rounded-lg border border-border bg-surface p-5">
+        <div className="rounded-lg border border-border bg-surface p-5 shadow-card">
           <p className="text-sm text-muted">Expiring Soon</p>
-          <p className="mt-2 text-3xl font-semibold">{expiringSoonCount}</p>
+          <p className="mt-2 text-4xl font-semibold tracking-tight text-warning">{expiringSoonCount}</p>
+        </div>
+        <div className="rounded-lg border border-border bg-surface p-5 shadow-card md:col-span-2">
+          <p className="text-sm text-muted">Suspended</p>
+          <p className="mt-2 text-2xl font-semibold tracking-tight text-danger">{suspendedCount}</p>
         </div>
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
-        <div className="overflow-hidden rounded-lg border border-border bg-surface">
+        <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-card">
           <div className="border-b border-border px-5 py-4">
             <h3 className="text-base font-semibold">Drivers</h3>
           </div>
@@ -246,16 +273,16 @@ export const DriverManagement = () => {
                 <tbody>
                   {drivers.map((driver) => (
                     <tr
-                      className="cursor-pointer border-t border-border transition hover:bg-panel/70"
+                      className="cursor-pointer border-t border-border transition hover:bg-panel"
                       key={driver.id}
                       onClick={() => startEdit(driver)}
                     >
-                      <td className="px-5 py-4 font-medium text-white">{driver.name}</td>
-                      <td className="px-5 py-4 text-slate-300">{driver.licenseNumber}</td>
-                      <td className="px-5 py-4 text-slate-300">
+                      <td className="px-5 py-4 font-semibold text-foreground">{driver.name}</td>
+                      <td className="px-5 py-4 text-muted">{driver.licenseNumber}</td>
+                      <td className="px-5 py-4 text-muted">
                         {new Date(driver.licenseExpiryDate).toLocaleDateString("en-IN")}
                       </td>
-                      <td className="px-5 py-4 text-slate-300">{driver.safetyScore}</td>
+                      <td className="px-5 py-4 text-muted">{driver.safetyScore}</td>
                       <td className="px-5 py-4">
                         <StatusBadge status={driver.status} />
                       </td>
@@ -267,7 +294,7 @@ export const DriverManagement = () => {
           )}
         </div>
 
-        <form className="rounded-lg border border-border bg-surface p-5" onSubmit={handleSubmit}>
+        <form className="rounded-lg border border-border bg-surface p-5 shadow-card" onSubmit={handleSubmit}>
           <div className="mb-5 flex items-start justify-between gap-3">
             <div>
               <h3 className="text-base font-semibold">
@@ -328,7 +355,7 @@ export const DriverManagement = () => {
             <label className="block">
               <span className="text-xs font-medium uppercase tracking-wide text-muted">Status</span>
               <select
-                className="mt-2 h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none transition focus:border-primary"
+                className="mt-2 h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary"
                 onChange={(event) => handleFieldChange("status", event.target.value)}
                 value={values.status}
               >
@@ -342,7 +369,7 @@ export const DriverManagement = () => {
           </div>
 
           {serverError ? (
-            <div className="mt-4 rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-red-200">
+            <div className="mt-4 rounded-md border border-danger bg-background px-3 py-2 text-sm text-danger">
               {serverError.message}
             </div>
           ) : null}

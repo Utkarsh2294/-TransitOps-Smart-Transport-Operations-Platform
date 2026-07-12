@@ -9,9 +9,9 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
-        primary: "bg-primary text-slate-950 hover:bg-cyan-300",
-        ghost: "text-slate-300 hover:bg-panel hover:text-white",
-        outline: "border border-border bg-transparent text-slate-200 hover:bg-panel",
+        primary: "bg-primary text-white shadow-sm hover:brightness-105",
+        ghost: "text-muted hover:bg-panel hover:text-foreground",
+        outline: "border border-border bg-surface text-foreground shadow-sm hover:bg-panel",
       },
       size: {
         default: "h-10 px-4 py-2",
@@ -36,4 +36,3 @@ export const Button = ({ asChild, className, size, variant, ...props }: ButtonPr
 
   return <Component className={cn(buttonVariants({ className, size, variant }))} {...props} />;
 };
-
