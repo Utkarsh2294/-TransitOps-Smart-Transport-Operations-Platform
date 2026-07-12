@@ -116,7 +116,7 @@ const seed = async () => {
       { source: "Mumbai", destination: "Pune", vIdx: 0, dIdx: 0, cargo: 8000, dist: 150, status: "Completed", finalOdo: 25150, fuel: 22 },
       { source: "Delhi", destination: "Jaipur", vIdx: 3, dIdx: 3, cargo: 2800, dist: 280, status: "Completed", finalOdo: 18280, fuel: 35 },
       { source: "Chennai", destination: "Bangalore", vIdx: 7, dIdx: 7, cargo: 2200, dist: 350, status: "Completed", finalOdo: 12350, fuel: 42 },
-      { source: "Ahmedabad", destination: "Surat", vIdx: 5, dIdx: 5, cargo: 18000, dist: 260, status: "Completed", finalOdo: 89260, fuel: 48 },
+      { source: "Ahmedabad", destination: "Surat", vIdx: 5, dIdx: 5, cargo: 18000, dist: 260, status: "Completed", finalOdo: 89260, fuel: 95 }, // Fuel-inefficient trip (260km / 95L = 2.7km/L, usually higher)
       // 3 Dispatched trips (vehicle/driver On_Trip)
       { source: "Mumbai", destination: "Nagpur", vIdx: 2, dIdx: 2, cargo: 15000, dist: 800, status: "Dispatched" },
       { source: "Lucknow", destination: "Varanasi", vIdx: 9, dIdx: 9, cargo: 2500, dist: 320, status: "Dispatched" },
@@ -232,6 +232,50 @@ const seed = async () => {
       });
     }
     console.log(`Seeded ${maintenanceData.length} maintenance logs.`);
+    // ── Seed vehicle budgets (One over-budget) ────────────────────
+    await tx.vehicleBudget.deleteMany({});
+    const budgetData = [
+      { vIdx: 0, budget: 15000 },
+      { vIdx: 2, budget: 20000 },
+      { vIdx: 3, budget: 3000 }, // Deliberately low budget to force over-budget
+      { vIdx: 5, budget: 25000 },
+      { vIdx: 7, budget: 8000 },
+      { vIdx: 10, budget: 12000 },
+    ];
+    for (const b of budgetData) {
+      const v = allVehicles[b.vIdx];
+      if (!v) continue;
+      await tx.vehicleBudget.create({
+        data: {
+          vehicleId: v.id,
+          monthlyBudget: b.budget,
+        },
+      });
+    }
+    console.log(`Seeded ${budgetData.length} vehicle budgets.`);
+
+    // ── Seed recurring expenses ───────────────────────────────────
+    await tx.recurringExpense.deleteMany({});
+    const recurringData = [
+      { vIdx: 0, category: "toll" as const, amount: 2500, frequency: "Monthly" as const, daysUntilDue: 15 },
+      { vIdx: 3, category: "other" as const, amount: 1500, frequency: "Monthly" as const, daysUntilDue: -5 }, // Overdue
+      { vIdx: 7, category: "toll" as const, amount: 3000, frequency: "Quarterly" as const, daysUntilDue: 45 },
+    ];
+    for (const r of recurringData) {
+      const v = allVehicles[r.vIdx];
+      if (!v) continue;
+      await tx.recurringExpense.create({
+        data: {
+          vehicleId: v.id,
+          category: r.category,
+          amount: r.amount,
+          frequency: r.frequency,
+          nextDueDate: new Date(Date.now() + r.daysUntilDue * 24 * 60 * 60 * 1000),
+          active: true,
+        },
+      });
+    }
+    console.log(`Seeded ${recurringData.length} recurring expenses.`);
   });
 
   console.log(`Seeded ${vehicles.length} vehicles and ${drivers.length} drivers.`);

@@ -1,6 +1,7 @@
 import { TripStatus, VehicleStatus } from "@prisma/client";
 
 import { prisma } from "../config/prisma.js";
+import path from "node:path";
 import PDFDocument from "pdfkit";
 import { getComplianceAlerts } from "./safety.service.js";
 
@@ -245,4 +246,109 @@ export const getCompliancePdf = async () => {
   alerts.length ? alerts.forEach((alert) => pdf.fontSize(9).text(`[${alert.severity.toUpperCase()}] ${alert.entityLabel}: ${alert.detail}`)) : pdf.fontSize(9).text("No active compliance alerts.");
   pdf.end();
   return done;
+};
+
+
+export const getFuelAnomalies = async () => {
+  const vehicleCosts = await getVehicleCostReport();
+  const anomalies = [];
+  
+  for (const vc of vehicleCosts) {
+    if (!vc.fuelEfficiencyKmPerLiter) continue;
+    
+    // Find completed trips for this vehicle
+    const trips = await prisma.trip.findMany({
+      where: { vehicleId: vc.vehicleId, status: 'Completed', fuelConsumedLiters: { not: null }, plannedDistanceKm: { gt: 0 } },
+      orderBy: { id: 'desc' }
+    });
+    
+    for (const trip of trips) {
+      const actualEfficiency = Number(trip.plannedDistanceKm) / Number(trip.fuelConsumedLiters);
+      if (actualEfficiency < vc.fuelEfficiencyKmPerLiter * 0.85) {
+        anomalies.push({
+          vehicleId: vc.vehicleId,
+          regNumber: vc.regNumber,
+          tripId: trip.id,
+          date: trip.createdAt,
+          actualEfficiency: round(actualEfficiency),
+          expectedEfficiency: vc.fuelEfficiencyKmPerLiter,
+          deviationPercent: round(((vc.fuelEfficiencyKmPerLiter - actualEfficiency) / vc.fuelEfficiencyKmPerLiter) * 100)
+        });
+      }
+    }
+  }
+  
+  return anomalies.sort((a, b) => b.deviationPercent - a.deviationPercent);
+};
+
+export const getFinancialBrief = async () => {
+  const vehicleCosts = await getVehicleCostReport();
+  
+  const topCostVehicles = [...vehicleCosts]
+    .sort((left, right) => right.totalOperationalCost - left.totalOperationalCost)
+    .slice(0, 3);
+    
+  const anomalies = await getFuelAnomalies();
+  const fuelAnomaliesCount = anomalies.length;
+  
+  const budgets = await prisma.vehicleBudget.findMany();
+  let overBudgetVehiclesCount = 0;
+  
+  for (const b of budgets) {
+    const vc = vehicleCosts.find(v => v.vehicleId === b.vehicleId);
+    if (vc && vc.totalOperationalCost > Number(b.monthlyBudget)) {
+      overBudgetVehiclesCount++;
+    }
+  }
+  
+  return { topCostVehicles, fuelAnomaliesCount, overBudgetVehiclesCount };
+};
+
+export const getBudgetStatus = async () => {
+  const vehicleCosts = await getVehicleCostReport();
+  const budgets = await prisma.vehicleBudget.findMany();
+  
+  const currentDay = new Date().getDate() || 1;
+  const daysInMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).getDate();
+  
+  return budgets.map(b => {
+    const vc = vehicleCosts.find(v => v.vehicleId === b.vehicleId);
+    const spentMTD = vc ? vc.totalOperationalCost : 0;
+    const projectedMonthEnd = (spentMTD / currentDay) * daysInMonth;
+    
+    return {
+      vehicleId: b.vehicleId,
+      regNumber: vc ? vc.regNumber : 'Unknown',
+      monthlyBudget: Number(b.monthlyBudget),
+      spentMTD,
+      projectedMonthEnd: round(projectedMonthEnd)
+    };
+  }).sort((a, b) => b.spentMTD - a.spentMTD);
+};
+
+export const getTripEfficiencyRankings = async () => {
+  return await getFuelAnomalies();
+};
+
+import fsSync from 'fs';
+
+export const saveSnapshot = async () => {
+  const report = await getVehicleCostReportCsv();
+  const snapshotsDir = path.join(process.cwd(), 'uploads', 'snapshots');
+  if (!fsSync.existsSync(snapshotsDir)) {
+    fsSync.mkdirSync(snapshotsDir, { recursive: true });
+  }
+  const filename = `snapshot-${Date.now()}.csv`;
+  fsSync.writeFileSync(path.join(snapshotsDir, filename), report);
+  return { filename };
+};
+
+export const getSnapshots = async () => {
+  const snapshotsDir = path.join(process.cwd(), 'uploads', 'snapshots');
+  if (!fsSync.existsSync(snapshotsDir)) return [];
+  return fsSync.readdirSync(snapshotsDir).filter(f => f.endsWith('.csv')).map(f => ({
+    id: f,
+    name: f,
+    createdAt: new Date(parseInt(f.split('-')[1])).toISOString()
+  })).sort((a, b) => b.id.localeCompare(a.id));
 };

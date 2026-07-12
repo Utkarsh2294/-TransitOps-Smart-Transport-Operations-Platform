@@ -1,4 +1,4 @@
-import { AlertTriangle, ArrowRight, BrainCircuit, RefreshCw, Route, Wrench } from "lucide-react";
+import { AlertTriangle, ArrowRight, BrainCircuit, RefreshCw, Route, Wrench, Activity } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import type { ApiErrorResponse } from "../../lib/api";
@@ -29,10 +29,12 @@ type KpiCardProps = {
 };
 
 const KpiCard = ({ helper, label, value }: KpiCardProps) => (
-  <div className="rounded-lg border border-border bg-surface p-5 shadow-card">
-    <p className="text-sm text-muted">{label}</p>
-    <p className="mt-2 text-3xl font-semibold">{value}</p>
-    <p className="mt-2 text-xs text-muted">{helper}</p>
+  <div className="flex flex-col justify-between h-full">
+    <div>
+      <p className="text-sm text-muted font-medium">{label}</p>
+      <p className="mt-2 text-3xl font-bold">{value}</p>
+    </div>
+    <p className="mt-2 text-xs text-muted font-medium bg-raised p-2 rounded-md border border-border">{helper}</p>
   </div>
 );
 
@@ -42,14 +44,6 @@ export const FleetManagerDashboard = () => {
   const [insights, setInsights] = useState<FleetInsightResponse | null>(null);
   const [serverError, setServerError] = useState<ApiErrorResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-
-  const highCostVehicles = useMemo(
-    () =>
-      [...vehicleCosts]
-        .sort((first, second) => second.totalOperationalCost - first.totalOperationalCost)
-        .slice(0, 4),
-    [vehicleCosts],
-  );
 
   const vehiclesNeedingAttention = useMemo(
     () =>
@@ -84,11 +78,11 @@ export const FleetManagerDashboard = () => {
   }, []);
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-6 lg:px-8">
-      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+    <section className="p-4 sm:p-6 lg:p-8 space-y-6">
+      <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-muted">Fleet Manager</p>
-          <h2 className="mt-1 text-2xl font-semibold">Operations Dashboard</h2>
+          <h2 className="mt-1 text-2xl font-bold tracking-tight">Operations Dashboard</h2>
         </div>
         <Button onClick={() => void loadDashboard()} type="button" variant="outline">
           <RefreshCw className="mr-2 h-4 w-4" />
@@ -97,223 +91,122 @@ export const FleetManagerDashboard = () => {
       </div>
 
       {serverError ? (
-        <div className="mb-6 rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-red-200">
+        <div className="rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-red-200">
           {serverError.message}
         </div>
       ) : null}
 
       {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, index) => (
-            <div className="h-28 animate-pulse rounded-lg bg-panel" key={index} />
+        <div className="bento-grid">
+          {Array.from({ length: 4 }).map((_, index) => (
+            <div className="bento-tile tile-1x1 animate-pulse bg-panel" key={index} />
           ))}
+          <div className="bento-tile tile-2x2 animate-pulse bg-panel" />
+          <div className="bento-tile tile-2x1 animate-pulse bg-panel" />
         </div>
       ) : dashboard ? (
-        <>
-          <div className="mb-6 grid gap-4 md:grid-cols-4">
+        <div className="bento-grid">
+          
+          {/* Top Row: AI Insights (Wide) */}
+          <div className="bento-tile tile-2x1 bg-surface shadow-sm flex flex-col justify-center">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="grid h-9 w-9 place-items-center rounded-md bg-primary/10 text-primary">
+                <BrainCircuit className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-base font-semibold">AI Fleet Insights</h3>
+                <p className="text-xs text-muted">
+                  {insights?.source === "ai" ? "AI generated summary" : "Rules-based fallback summary"}
+                </p>
+              </div>
+            </div>
+            <p className="text-sm leading-6 font-medium text-foreground">
+              {insights?.briefing ?? "No briefing available yet."}
+            </p>
+          </div>
+
+          <div className="bento-tile tile-1x1 bg-surface shadow-sm">
             <KpiCard
               helper={`${dashboard.kpis.activeVehicles} active of ${dashboard.kpis.totalVehicles} total`}
               label="Fleet Utilization"
               value={`${dashboard.kpis.fleetUtilizationPercent}%`}
             />
+          </div>
+          <div className="bento-tile tile-1x1 bg-surface shadow-sm">
             <KpiCard
               helper={`${dashboard.kpis.pendingTrips} waiting in draft`}
               label="Active Trips"
               value={formatNumber(dashboard.kpis.activeTrips)}
             />
+          </div>
+
+          {/* Actionable Insights */}
+          <div className="bento-tile tile-2x2 bg-surface shadow-sm overflow-hidden flex flex-col">
+            <h3 className="text-base font-semibold mb-3 flex items-center gap-2">
+              <Activity className="h-5 w-5 text-warning" /> Suggested Actions
+            </h3>
+            <div className="flex-1 overflow-y-auto pr-2 space-y-3">
+              {(insights?.actions ?? []).map((action, idx) => (
+                <div className="rounded-lg border border-border bg-raised p-3 flex justify-between items-start" key={idx}>
+                  <div>
+                    <p className="font-semibold text-sm">{action.label}</p>
+                    <p className="text-xs text-muted mt-1">{action.detail}</p>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${action.severity === 'danger' ? 'bg-danger/10 text-danger' : action.severity === 'warning' ? 'bg-warning/10 text-warning' : 'bg-info/10 text-info'}`}>
+                    {action.severity}
+                  </span>
+                </div>
+              ))}
+              {(insights?.actions?.length ?? 0) === 0 && (
+                <p className="text-sm text-muted">No immediate actions needed.</p>
+              )}
+            </div>
+          </div>
+
+          {/* Attention Queue */}
+          <div className="bento-tile tile-2x2 bg-surface shadow-sm flex flex-col">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-base font-semibold flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-danger" /> Attention Queue
+              </h3>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto pr-2 space-y-2">
+              {vehiclesNeedingAttention.length === 0 ? (
+                <p className="text-sm text-muted py-4">No vehicle issues flagged.</p>
+              ) : (
+                vehiclesNeedingAttention.map((vehicle) => (
+                  <div className="border border-border rounded-lg bg-raised p-3 flex justify-between items-center" key={vehicle.vehicleId}>
+                    <div>
+                      <p className="font-semibold text-sm">{vehicle.regNumber}</p>
+                      <StatusBadge status={vehicle.status} />
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold text-sm">{formatCurrency(vehicle.totalOperationalCost)}</p>
+                      <p className="text-xs text-muted">{formatMetric(vehicle.fuelEfficiencyKmPerLiter, " km/L")}</p>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          <div className="bento-tile tile-1x1 bg-surface shadow-sm">
             <KpiCard
               helper="Unavailable for dispatch"
               label="Vehicles In Shop"
               value={formatNumber(dashboard.kpis.maintenanceVehicles)}
             />
+          </div>
+          <div className="bento-tile tile-1x1 bg-surface shadow-sm">
             <KpiCard
               helper={`${dashboard.kpis.availableVehicles} vehicles available`}
               label="Drivers On Duty"
               value={formatNumber(dashboard.kpis.driversOnDuty)}
             />
           </div>
-
-          <div className="mb-6 grid gap-4 md:grid-cols-4">
-            <KpiCard
-              helper={`${formatNumber(dashboard.analytics.fuelLiters)} fuel liters logged`}
-              label="Operational Cost"
-              value={formatCurrency(dashboard.analytics.totalOperationalCost)}
-            />
-            <KpiCard
-              helper="Fuel logs and completed trip fuel"
-              label="Fuel Efficiency"
-              value={formatMetric(dashboard.analytics.fuelEfficiencyKmPerLiter, " km/L")}
-            />
-            <KpiCard
-              helper="Completed trip distance"
-              label="Distance Covered"
-              value={`${formatNumber(dashboard.analytics.completedDistanceKm)} km`}
-            />
-            <KpiCard
-              helper="Fuel, maintenance, and expenses"
-              label="Cost Breakdown"
-              value={formatCurrency(
-                dashboard.analytics.fuelCost +
-                  dashboard.analytics.maintenanceCost +
-                  dashboard.analytics.expenseCost,
-              )}
-            />
-          </div>
-
-          <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
-            <div className="overflow-hidden rounded-lg border border-border bg-surface">
-              <div className="flex items-center justify-between border-b border-border px-5 py-4">
-                <div>
-                  <h3 className="text-base font-semibold">Fleet Attention Queue</h3>
-                  <p className="mt-1 text-sm text-muted">Vehicles with current cost or maintenance signals</p>
-                </div>
-                <AlertTriangle className="h-5 w-5 text-warning" />
-              </div>
-
-              {vehiclesNeedingAttention.length === 0 ? (
-                <div className="p-10 text-center">
-                  <p className="text-lg font-semibold">No vehicle issues flagged</p>
-                  <p className="mt-2 text-sm text-muted">Maintenance and cost activity will appear here.</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full min-w-[760px] border-collapse text-left text-sm">
-                    <thead className="bg-panel text-xs uppercase tracking-wide text-muted">
-                      <tr>
-                        <th className="px-5 py-3 font-medium">Vehicle</th>
-                        <th className="px-5 py-3 font-medium">Status</th>
-                        <th className="px-5 py-3 font-medium">Trips</th>
-                        <th className="px-5 py-3 font-medium">Total Cost</th>
-                        <th className="px-5 py-3 font-medium">Efficiency</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {vehiclesNeedingAttention.map((vehicle) => (
-                        <tr className="border-t border-border transition hover:bg-panel/70" key={vehicle.vehicleId}>
-                          <td className="px-5 py-4">
-                            <p className="font-medium text-foreground">{vehicle.regNumber}</p>
-                            <p className="mt-1 text-xs text-muted">{vehicle.name}</p>
-                          </td>
-                          <td className="px-5 py-4">
-                            <StatusBadge status={vehicle.status} />
-                          </td>
-                          <td className="px-5 py-4 text-muted">{vehicle.completedTrips}</td>
-                          <td className="px-5 py-4 font-medium text-foreground">
-                            {formatCurrency(vehicle.totalOperationalCost)}
-                          </td>
-                          <td className="px-5 py-4 text-muted">
-                            {formatMetric(vehicle.fuelEfficiencyKmPerLiter, " km/L")}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-            <aside className="space-y-5">
-              <div className="rounded-lg border border-border bg-surface p-5">
-                <div className="mb-4 flex items-center gap-2">
-                  <div className="grid h-9 w-9 place-items-center rounded-md bg-primary/10 text-primary">
-                    <Route className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-semibold">Trip Snapshot</h3>
-                    <p className="text-sm text-muted">Current dispatch load</p>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between rounded-md border border-border bg-background p-3">
-                    <span className="text-sm text-muted">Active trips</span>
-                    <span className="font-semibold">{dashboard.kpis.activeTrips}</span>
-                  </div>
-                  <div className="flex items-center justify-between rounded-md border border-border bg-background p-3">
-                    <span className="text-sm text-muted">Pending trips</span>
-                    <span className="font-semibold">{dashboard.kpis.pendingTrips}</span>
-                  </div>
-                  <div className="flex items-center justify-between rounded-md border border-border bg-background p-3">
-                    <span className="text-sm text-muted">Drivers on duty</span>
-                    <span className="font-semibold">{dashboard.kpis.driversOnDuty}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-border bg-surface p-5">
-                <div className="mb-4 flex items-center gap-2">
-                  <div className="grid h-9 w-9 place-items-center rounded-md bg-warning/10 text-warning">
-                    <Wrench className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h3 className="text-base font-semibold">Highest Cost</h3>
-                    <p className="text-sm text-muted">Top spend vehicles</p>
-                  </div>
-                </div>
-                <div className="space-y-3">
-                  {highCostVehicles.length === 0 ? (
-                    <p className="text-sm text-muted">No cost records yet.</p>
-                  ) : (
-                    highCostVehicles.map((vehicle) => (
-                      <div className="rounded-md border border-border bg-background p-3" key={vehicle.vehicleId}>
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="font-medium text-foreground">{vehicle.regNumber}</p>
-                            <p className="mt-1 text-xs text-muted">{vehicle.name}</p>
-                          </div>
-                          <p className="text-sm font-semibold text-foreground">
-                            {formatCurrency(vehicle.totalOperationalCost)}
-                          </p>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-
-            <div className="rounded-lg border border-border bg-surface p-5">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-base font-semibold">Next Best Action</h3>
-                  <p className="mt-1 text-sm text-muted">Review in-shop vehicles and draft trips before dispatch.</p>
-                </div>
-                <ArrowRight className="h-5 w-5 text-primary" />
-              </div>
-            </div>
-
-            <div className="rounded-lg border border-border bg-surface p-5">
-              <div className="mb-4 flex items-center gap-2">
-                <div className="grid h-9 w-9 place-items-center rounded-md bg-primary/10 text-primary">
-                  <BrainCircuit className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-semibold">Fleet Briefing</h3>
-                  <p className="text-sm text-muted">
-                    {insights?.source === "ai" ? "AI summary from current fleet data" : "Rules-based fallback summary"}
-                  </p>
-                </div>
-              </div>
-              <p className="text-sm leading-6 text-foreground">
-                {insights?.briefing ?? "No briefing available yet."}
-              </p>
-              <div className="mt-4 space-y-2">
-                {(insights?.actions ?? []).slice(0, 4).map((action) => (
-                  <div className="rounded-md border border-border bg-background p-3" key={`${action.label}-${action.detail}`}>
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-medium text-foreground">{action.label}</p>
-                        <p className="mt-1 text-xs text-muted">{action.detail}</p>
-                      </div>
-                      <span className="rounded-full border border-border px-2 py-1 text-[11px] uppercase tracking-wide text-muted">
-                        {action.severity}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </aside>
+          
         </div>
-      </>
       ) : null}
     </section>
   );

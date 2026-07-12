@@ -10,7 +10,7 @@ export const generateToken = (user: AuthUser): string =>
   jwt.sign(
     { id: user.id, role: user.role, email: user.email, name: user.name },
     env.JWT_SECRET,
-    { expiresIn: env.JWT_EXPIRES_IN },
+    { expiresIn: env.JWT_EXPIRES_IN as any },
   );
 
 export const loginUser = async (email: string, password: string) => {

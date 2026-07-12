@@ -1,4 +1,4 @@
-import { CheckSquare, Plus, RefreshCw, Save, Trash2, X } from "lucide-react";
+import { ArrowLeft, CheckSquare, Plus, RefreshCw, Save, Trash2, X } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { Button } from "../ui/Button";
@@ -80,6 +80,7 @@ const Field = ({ error, label, name, onChange, type = "text", value }: FieldProp
 export const VehicleRegistry = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [isCreating, setIsCreating] = useState(false);
   const [values, setValues] = useState<VehicleFormValues>(blankForm);
   const [errors, setErrors] = useState<Partial<Record<keyof VehicleFormValues, string>>>({});
   const [serverError, setServerError] = useState<ApiErrorResponse | null>(null);
@@ -130,6 +131,15 @@ export const VehicleRegistry = () => {
 
   const startCreate = () => {
     setSelectedVehicle(null);
+    setIsCreating(true);
+    setValues(blankForm);
+    setErrors({});
+    setServerError(null);
+  };
+
+  const clearSelection = () => {
+    setSelectedVehicle(null);
+    setIsCreating(false);
     setValues(blankForm);
     setErrors({});
     setServerError(null);
@@ -137,6 +147,7 @@ export const VehicleRegistry = () => {
 
   const startEdit = (vehicle: Vehicle) => {
     setSelectedVehicle(vehicle);
+    setIsCreating(false);
     setValues(toFormValues(vehicle));
     setErrors({});
     setServerError(null);
@@ -157,6 +168,7 @@ export const VehicleRegistry = () => {
         ? await updateVehicle(selectedVehicle, values)
         : await createVehicle(values);
       setSelectedVehicle(response.data);
+      setIsCreating(false);
       setValues(toFormValues(response.data));
       await loadVehicles();
     } catch (error) {
@@ -181,8 +193,7 @@ export const VehicleRegistry = () => {
 
     try {
       await deleteVehicle(selectedVehicle);
-      setSelectedVehicle(null);
-      setValues(blankForm);
+      clearSelection();
       await loadVehicles();
     } catch (error) {
       setServerError(error as ApiErrorResponse);
@@ -195,6 +206,111 @@ export const VehicleRegistry = () => {
     if (!selectedIds.length || !window.confirm(`Change ${selectedIds.length} selected vehicles to ${bulkStatus.replace("_", " ")}?`)) return;
     setIsSaving(true); try { await bulkUpdateVehicleStatus(selectedIds, bulkStatus); setSelectedIds([]); await loadVehicles(); } catch (error) { setServerError(error as ApiErrorResponse); } finally { setIsSaving(false); }
   };
+
+  if (selectedVehicle || isCreating) {
+    return (
+      <section className="mx-auto max-w-7xl px-4 py-7 lg:px-8">
+        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <div>
+            <button onClick={clearSelection} className="flex items-center text-sm font-medium text-muted hover:text-primary transition-colors">
+              <ArrowLeft className="mr-1 h-4 w-4" /> Back to Registry
+            </button>
+            <h2 className="mt-4 text-3xl font-semibold tracking-tight">
+              {selectedVehicle ? selectedVehicle.regNumber : "New Vehicle"}
+            </h2>
+            {selectedVehicle && (
+              <p className="mt-1 text-muted">
+                {selectedVehicle.name} • {selectedVehicle.type}
+              </p>
+            )}
+          </div>
+          {selectedVehicle && (
+            <div className="flex items-center gap-3">
+              <StatusBadge status={selectedVehicle.status} />
+              <Button disabled={isSaving} onClick={() => void handleDelete()} type="button" variant="outline" size="sm">
+                <Trash2 className="mr-2 h-4 w-4" />
+                Delete
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {selectedVehicle && (
+          <div className="mb-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="p-5 bg-surface border border-border rounded-[14px] shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted">Status</p>
+              <p className="mt-2 font-semibold text-2xl">{selectedVehicle.status.replace("_", " ")}</p>
+            </div>
+            <div className="p-5 bg-surface border border-border rounded-[14px] shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted">Documents</p>
+              <p className={`mt-2 font-semibold text-2xl ${selectedVehicle.documentCount >= 4 ? "text-success" : "text-warning"}`}>
+                {selectedVehicle.documentCount}/4 Docs
+              </p>
+            </div>
+            <div className="p-5 bg-surface border border-border rounded-[14px] shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted">Odometer</p>
+              <p className="mt-2 font-semibold text-2xl">{formatNumber(selectedVehicle.odometerKm)} km</p>
+            </div>
+            <div className="p-5 bg-surface border border-border rounded-[14px] shadow-sm">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted">Service Due</p>
+              <p className="mt-2 font-semibold text-2xl text-info">
+                {selectedVehicle.serviceIntervalKm ? `${formatNumber(selectedVehicle.serviceIntervalKm - (selectedVehicle.odometerKm % selectedVehicle.serviceIntervalKm))} km` : 'N/A'}
+              </p>
+            </div>
+          </div>
+        )}
+
+        <div className="grid gap-6">
+          <form className="rounded-[14px] border border-border bg-surface p-6 shadow-sm" onSubmit={handleSubmit}>
+            <h3 className="text-base font-semibold mb-5">Vehicle Details</h3>
+            <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+              <Field error={errors.regNumber} label="Registration Number" name="regNumber" onChange={handleFieldChange} value={values.regNumber} />
+              <Field label="Service Interval Km" name="serviceIntervalKm" onChange={handleFieldChange} type="number" value={values.serviceIntervalKm} />
+              <Field error={errors.name} label="Vehicle Name" name="name" onChange={handleFieldChange} value={values.name} />
+              <Field error={errors.type} label="Type" name="type" onChange={handleFieldChange} value={values.type} />
+              <Field error={errors.maxLoadCapacityKg} label="Max Load Kg" name="maxLoadCapacityKg" onChange={handleFieldChange} type="number" value={values.maxLoadCapacityKg} />
+              <Field error={errors.odometerKm} label="Odometer Km" name="odometerKm" onChange={handleFieldChange} type="number" value={values.odometerKm} />
+              <Field error={errors.acquisitionCost} label="Acquisition Cost" name="acquisitionCost" onChange={handleFieldChange} type="number" value={values.acquisitionCost} />
+              <label className="block">
+                <span className="text-xs font-medium uppercase tracking-wide text-muted">Status</span>
+                <select
+                  className="mt-2 h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary"
+                  onChange={(event) => handleFieldChange("status", event.target.value)}
+                  value={values.status}
+                >
+                  {statuses.map((status) => (
+                    <option key={status} value={status}>
+                      {status.replace("_", " ")}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            {serverError ? (
+              <div className="mt-5 rounded-md border border-danger bg-danger/10 px-4 py-3 text-sm text-danger">
+                {serverError.message}
+              </div>
+            ) : null}
+
+            <div className="mt-6 flex justify-end">
+              <Button disabled={isSaving} type="submit">
+                <Save className="mr-2 h-4 w-4" />
+                {isSaving ? "Saving..." : selectedVehicle ? "Save Changes" : "Create Vehicle"}
+              </Button>
+            </div>
+          </form>
+
+          {selectedVehicle && (
+            <div className="grid gap-6 lg:grid-cols-2">
+              <VehicleMaintenance key={selectedVehicle.id} onChanged={loadVehicles} vehicle={selectedVehicle} />
+              <VehicleDocuments key={`documents-${selectedVehicle.id}`} onChanged={loadVehicles} vehicle={selectedVehicle} />
+            </div>
+          )}
+        </div>
+      </section>
+    );
+  }
 
   return (
     <section className="mx-auto max-w-7xl px-4 py-7 lg:px-8">
@@ -245,182 +361,67 @@ export const VehicleRegistry = () => {
           <p className="text-sm text-muted">In Shop / Retired</p>
           <p className="mt-2 text-4xl font-semibold tracking-tight text-warning">{attentionCount}</p>
         </div>
-        <div className="rounded-lg border border-border bg-surface p-5 shadow-card md:col-span-2">
-          <p className="text-sm text-muted">Registry Mode</p>
-          <p className="mt-2 text-2xl font-semibold tracking-tight">
-            {selectedVehicle ? selectedVehicle.regNumber : "New asset"}
-          </p>
-        </div>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
-        <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-card">
-          <div className="border-b border-border px-5 py-4">
-            <h3 className="text-base font-semibold">Registry</h3>
-          </div>
+      <div className="overflow-hidden rounded-[14px] border border-border bg-surface shadow-card">
+        <div className="border-b border-border px-5 py-4">
+          <h3 className="text-base font-semibold">Registry</h3>
+        </div>
 
-          {isLoading ? (
-            <div className="space-y-3 p-5">
-              {Array.from({ length: 5 }).map((_, index) => (
-                <div className="h-12 animate-pulse rounded-md bg-panel" key={index} />
-              ))}
-            </div>
-          ) : vehicles.length === 0 ? (
-            <div className="p-10 text-center">
-              <p className="text-lg font-semibold">No vehicles registered yet</p>
-              <p className="mt-2 text-sm text-muted">Add the first vehicle to begin fleet setup.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] border-collapse text-left text-sm">
-                <thead className="bg-panel text-xs uppercase tracking-wide text-muted">
-                  <tr>
-                    <th className="px-5 py-3 font-medium"><input aria-label="Select all vehicles" checked={vehicles.length > 0 && selectedIds.length === vehicles.length} onChange={(event) => setSelectedIds(event.target.checked ? vehicles.map((vehicle) => vehicle.id) : [])} type="checkbox" /></th>
-                    <th className="px-5 py-3 font-medium">Reg No.</th>
-                    <th className="px-5 py-3 font-medium">Vehicle</th>
-                    <th className="px-5 py-3 font-medium">Type</th>
-                    <th className="px-5 py-3 font-medium">Capacity</th>
-                    <th className="px-5 py-3 font-medium">Docs</th>
-                    <th className="px-5 py-3 font-medium">Status</th>
+        {isLoading ? (
+          <div className="space-y-3 p-5">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div className="h-12 animate-pulse rounded-md bg-panel" key={index} />
+            ))}
+          </div>
+        ) : vehicles.length === 0 ? (
+          <div className="p-10 text-center">
+            <p className="text-lg font-semibold">No vehicles registered yet</p>
+            <p className="mt-2 text-sm text-muted">Add the first vehicle to begin fleet setup.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[760px] border-collapse text-left text-sm">
+              <thead className="bg-panel text-xs uppercase tracking-wide text-muted">
+                <tr>
+                  <th className="px-5 py-3 font-medium"><input aria-label="Select all vehicles" checked={vehicles.length > 0 && selectedIds.length === vehicles.length} onChange={(event) => setSelectedIds(event.target.checked ? vehicles.map((vehicle) => vehicle.id) : [])} type="checkbox" /></th>
+                  <th className="px-5 py-3 font-medium">Reg No.</th>
+                  <th className="px-5 py-3 font-medium">Vehicle</th>
+                  <th className="px-5 py-3 font-medium">Type</th>
+                  <th className="px-5 py-3 font-medium">Capacity</th>
+                  <th className="px-5 py-3 font-medium">Docs</th>
+                  <th className="px-5 py-3 font-medium">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {vehicles.map((vehicle) => (
+                  <tr
+                    className="cursor-pointer border-t border-border transition hover:bg-panel"
+                    key={vehicle.id}
+                    onClick={() => startEdit(vehicle)}
+                  >
+                    <td className="px-5 py-4" onClick={(event) => event.stopPropagation()}><input aria-label={`Select ${vehicle.regNumber}`} checked={selectedIds.includes(vehicle.id)} onChange={(event) => setSelectedIds((current) => event.target.checked ? [...current, vehicle.id] : current.filter((id) => id !== vehicle.id))} type="checkbox" /></td>
+                    <td className="px-5 py-4 font-semibold text-foreground">{vehicle.regNumber}</td>
+                    <td className="px-5 py-4 text-muted">{vehicle.name}</td>
+                    <td className="px-5 py-4 text-muted">{vehicle.type}</td>
+                    <td className="px-5 py-4 text-muted">
+                      {formatNumber(vehicle.maxLoadCapacityKg)} kg
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className={`text-xs font-semibold ${vehicle.documentCount >= 4 ? "text-success" : "text-warning"}`}>
+                        {vehicle.documentCount}/4 docs
+                      </span>
+                    </td>
+                    <td className="px-5 py-4">
+                      <StatusBadge status={vehicle.status} />
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {vehicles.map((vehicle) => (
-                    <tr
-                      className="cursor-pointer border-t border-border transition hover:bg-panel"
-                      key={vehicle.id}
-                      onClick={() => startEdit(vehicle)}
-                    >
-                      <td className="px-5 py-4" onClick={(event) => event.stopPropagation()}><input aria-label={`Select ${vehicle.regNumber}`} checked={selectedIds.includes(vehicle.id)} onChange={(event) => setSelectedIds((current) => event.target.checked ? [...current, vehicle.id] : current.filter((id) => id !== vehicle.id))} type="checkbox" /></td>
-                      <td className="px-5 py-4 font-semibold text-foreground">{vehicle.regNumber}</td>
-                      <td className="px-5 py-4 text-muted">{vehicle.name}</td>
-                      <td className="px-5 py-4 text-muted">{vehicle.type}</td>
-                      <td className="px-5 py-4 text-muted">
-                        {formatNumber(vehicle.maxLoadCapacityKg)} kg
-                      </td>
-                      <td className="px-5 py-4">
-                        <span className={`text-xs font-semibold ${vehicle.documentCount >= 4 ? "text-success" : "text-warning"}`}>
-                          {vehicle.documentCount}/4 docs
-                        </span>
-                      </td>
-                      <td className="px-5 py-4">
-                        <StatusBadge status={vehicle.status} />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-
-        <div>
-        <form className="rounded-lg border border-border bg-surface p-5 shadow-card" onSubmit={handleSubmit}>
-          <div className="mb-5 flex items-start justify-between gap-3">
-            <div>
-              <h3 className="text-base font-semibold">
-                {selectedVehicle ? "Vehicle Detail" : "Add Vehicle"}
-              </h3>
-              <p className="mt-1 text-sm text-muted">
-                {selectedVehicle ? selectedVehicle.regNumber : "Create a new fleet asset"}
-              </p>
-            </div>
-            {selectedVehicle ? (
-              <Button aria-label="Clear selected vehicle" onClick={startCreate} size="icon" type="button" variant="ghost">
-                <X className="h-4 w-4" />
-              </Button>
-            ) : null}
-          </div>
-
-          <div className="grid gap-4">
-            <Field
-              error={errors.regNumber}
-              label="Registration Number"
-              name="regNumber"
-              onChange={handleFieldChange}
-              value={values.regNumber}
-            />
-            <Field label="Service Interval Km" name="serviceIntervalKm" onChange={handleFieldChange} type="number" value={values.serviceIntervalKm} />
-            <Field
-              error={errors.name}
-              label="Vehicle Name"
-              name="name"
-              onChange={handleFieldChange}
-              value={values.name}
-            />
-            <Field
-              error={errors.type}
-              label="Type"
-              name="type"
-              onChange={handleFieldChange}
-              value={values.type}
-            />
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field
-                error={errors.maxLoadCapacityKg}
-                label="Max Load Kg"
-                name="maxLoadCapacityKg"
-                onChange={handleFieldChange}
-                type="number"
-                value={values.maxLoadCapacityKg}
-              />
-              <Field
-                error={errors.odometerKm}
-                label="Odometer Km"
-                name="odometerKm"
-                onChange={handleFieldChange}
-                type="number"
-                value={values.odometerKm}
-              />
-            </div>
-            <Field
-              error={errors.acquisitionCost}
-              label="Acquisition Cost"
-              name="acquisitionCost"
-              onChange={handleFieldChange}
-              type="number"
-              value={values.acquisitionCost}
-            />
-            <label className="block">
-              <span className="text-xs font-medium uppercase tracking-wide text-muted">Status</span>
-              <select
-                className="mt-2 h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary"
-                onChange={(event) => handleFieldChange("status", event.target.value)}
-                value={values.status}
-              >
-                {statuses.map((status) => (
-                  <option key={status} value={status}>
-                    {status.replace("_", " ")}
-                  </option>
                 ))}
-              </select>
-            </label>
+              </tbody>
+            </table>
           </div>
-
-          {serverError ? (
-            <div className="mt-4 rounded-md border border-danger bg-background px-3 py-2 text-sm text-danger">
-              {serverError.message}
-            </div>
-          ) : null}
-
-          <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-            <Button disabled={isSaving} type="submit">
-              <Save className="mr-2 h-4 w-4" />
-              {isSaving ? "Saving..." : selectedVehicle ? "Save Changes" : "Create Vehicle"}
-            </Button>
-            {selectedVehicle ? (
-              <Button disabled={isSaving} onClick={() => void handleDelete()} type="button" variant="outline">
-                <Trash2 className="mr-2 h-4 w-4" />
-                Delete
-              </Button>
-            ) : null}
-          </div>
-        </form>
-        {selectedVehicle ? <VehicleMaintenance key={selectedVehicle.id} onChanged={loadVehicles} vehicle={selectedVehicle} /> : null}
-        {selectedVehicle ? <VehicleDocuments key={`documents-${selectedVehicle.id}`} onChanged={loadVehicles} vehicle={selectedVehicle} /> : null}
-        </div>
+        )}
       </div>
     </section>
   );
 };
-

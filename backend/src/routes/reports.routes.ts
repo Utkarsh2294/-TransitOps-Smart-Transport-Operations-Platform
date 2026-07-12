@@ -5,6 +5,12 @@ import {
   exportCompliancePdfController,
   getFleetDashboardReportController,
   getVehicleCostReportController,
+  getFuelAnomaliesController,
+  getFinancialBriefController,
+  getBudgetStatusController,
+  getTripEfficiencyRankingsController,
+  saveSnapshotController,
+  getSnapshotsController
 } from "../controllers/reports.controller.js";
 import { requireAuth, requireRoles } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -28,5 +34,41 @@ reportsRouter.get(
   "/vehicle-costs.csv",
   requireRoles("fleet_manager", "financial_analyst"),
   asyncHandler(exportVehicleCostReportController),
+);
+
+reportsRouter.get(
+  "/fuel-anomalies",
+  requireRoles("fleet_manager", "financial_analyst"),
+  asyncHandler(getFuelAnomaliesController)
+);
+
+reportsRouter.get(
+  "/financial-brief",
+  requireRoles("fleet_manager", "financial_analyst"),
+  asyncHandler(getFinancialBriefController)
+);
+
+reportsRouter.get(
+  "/budget-status",
+  requireRoles("fleet_manager", "financial_analyst"),
+  asyncHandler(getBudgetStatusController)
+);
+
+reportsRouter.get(
+  "/trip-efficiency",
+  requireRoles("fleet_manager", "financial_analyst"),
+  asyncHandler(getTripEfficiencyRankingsController)
+);
+
+reportsRouter.post(
+  "/snapshot",
+  requireRoles("fleet_manager", "financial_analyst"),
+  asyncHandler(saveSnapshotController)
+);
+
+reportsRouter.get(
+  "/snapshots",
+  requireRoles("fleet_manager", "financial_analyst"),
+  asyncHandler(getSnapshotsController)
 );
 

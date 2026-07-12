@@ -223,3 +223,37 @@ export const deleteVehicle = async (id: number) => {
   }
 };
 
+
+
+export const updateVehicleBudget = async (vehicleId: number, monthlyBudget: number) => {
+  return await prisma.vehicleBudget.upsert({
+    where: { vehicleId },
+    update: { monthlyBudget },
+    create: { vehicleId, monthlyBudget }
+  });
+};
+
+export const getVehicleFuelEfficiencyHistory = async (vehicleId: number) => {
+  const trips = await prisma.trip.findMany({
+    where: { vehicleId, status: 'Completed', fuelConsumedLiters: { not: null }, plannedDistanceKm: { gt: 0 } },
+    orderBy: { createdAt: 'asc' }
+  });
+  
+  let totalDist = 0;
+  let totalFuel = 0;
+  
+  const history = trips.map(t => {
+    const dist = Number(t.plannedDistanceKm);
+    const fuel = Number(t.fuelConsumedLiters);
+    totalDist += dist;
+    totalFuel += fuel;
+    return {
+      tripId: t.id,
+      date: t.createdAt,
+      efficiency: Number((dist / fuel).toFixed(2)),
+      rollingAverage: Number((totalDist / totalFuel).toFixed(2))
+    };
+  });
+  
+  return history;
+};

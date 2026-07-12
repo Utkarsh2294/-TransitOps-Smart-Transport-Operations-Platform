@@ -13,6 +13,10 @@ export type Trip = {
   status: TripStatus;
   createdById: number;
   createdAt: string;
+  actualCost?: number;
+  plannedCost?: number;
+  costDeviationPercent?: number;
+  efficiencyKmPerLiter?: number;
 };
 
 export type TripFormValues = {

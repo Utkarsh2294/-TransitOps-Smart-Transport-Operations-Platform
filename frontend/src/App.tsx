@@ -20,6 +20,7 @@ import { LoginPage } from "./components/auth/LoginPage";
 import { Button } from "./components/ui/Button";
 import { DriverHomeView } from "./components/dashboard/DriverHomeView";
 import { FleetManagerDashboard } from "./components/dashboard/FleetManagerDashboard";
+import { FinancialAnalystDashboard } from "./components/dashboard/FinancialAnalystDashboard";
 import { DriverManagement } from "./components/drivers/DriverManagement";
 import { FuelExpenseManagement } from "./components/finance/FuelExpenseManagement";
 import { FinancialReports } from "./components/reports/FinancialReports";
@@ -55,14 +56,14 @@ const ROLE_NAV: Record<string, View[]> = {
   fleet_manager: ["dashboard", "vehicles", "drivers", "trips", "finance", "safety", "reports"],
   driver: ["trips"],
   safety_officer: ["safety", "vehicles", "drivers"],
-  financial_analyst: ["reports", "finance", "vehicles"],
+  financial_analyst: ["dashboard", "reports", "finance", "vehicles"],
 };
 
 const ROLE_DEFAULT_VIEW: Record<string, View> = {
   fleet_manager: "dashboard",
   driver: "trips",
   safety_officer: "safety",
-  financial_analyst: "reports",
+  financial_analyst: "dashboard",
 };
 
 export const App = () => {
@@ -104,7 +105,7 @@ export const App = () => {
     }
     switch (view) {
       case "dashboard":
-        return <FleetManagerDashboard />;
+        return user?.role === "financial_analyst" ? <FinancialAnalystDashboard /> : <FleetManagerDashboard />;
       case "vehicles":
         return <VehicleRegistry />;
       case "drivers":

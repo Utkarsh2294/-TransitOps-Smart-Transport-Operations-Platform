@@ -5,6 +5,7 @@ import {
   createTrip,
   createTripSchema,
   listTrips,
+  getTripById,
 } from "../services/trips.service.js";
 import { cancelTrip, completeTrip, dispatchTrip } from "../services/tripLifecycle.js";
 import { ApiError } from "../utils/apiError.js";
@@ -35,6 +36,12 @@ export const getTripsController = async (req: Request, res: Response) => {
   const pagination = parsePagination(req.query);
   const trips = await listTrips(pagination);
   res.json(trips);
+};
+
+export const getTripByIdController = async (req: Request, res: Response) => {
+  const tripId = parseTripId(req.params);
+  const trip = await getTripById(tripId);
+  res.json({ data: trip });
 };
 
 export const createTripController = async (req: Request, res: Response) => {

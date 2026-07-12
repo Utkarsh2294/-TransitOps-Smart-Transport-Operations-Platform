@@ -11,6 +11,8 @@ export const createFuelLogSchema = z.object({
   liters: z.coerce.number().positive("Fuel liters must be greater than zero"),
   cost: z.coerce.number().nonnegative("Fuel cost cannot be negative"),
   date: z.coerce.date().default(() => new Date()),
+  receiptUrl: z.string().optional(),
+  receiptName: z.string().optional(),
 });
 
 export const createExpenseSchema = z.object({
@@ -19,6 +21,8 @@ export const createExpenseSchema = z.object({
   amount: z.coerce.number().nonnegative("Expense amount cannot be negative"),
   date: z.coerce.date().default(() => new Date()),
   note: z.string().trim().max(500, "Note cannot exceed 500 characters").optional(),
+  receiptUrl: z.string().optional(),
+  receiptName: z.string().optional(),
 });
 
 const serializeFuelLog = (fuelLog: {
@@ -28,6 +32,8 @@ const serializeFuelLog = (fuelLog: {
   liters: Prisma.Decimal;
   cost: Prisma.Decimal;
   date: Date;
+  receiptUrl: string | null;
+  receiptName: string | null;
 }) => ({
   ...fuelLog,
   liters: Number(fuelLog.liters),
@@ -41,6 +47,8 @@ const serializeExpense = (expense: {
   amount: Prisma.Decimal;
   date: Date;
   note: string | null;
+  receiptUrl: string | null;
+  receiptName: string | null;
 }) => ({
   ...expense,
   amount: Number(expense.amount),
@@ -107,6 +115,8 @@ export const createFuelLog = async (input: z.infer<typeof createFuelLogSchema>) 
       liters: new Prisma.Decimal(input.liters),
       cost: new Prisma.Decimal(input.cost),
       date: input.date,
+      receiptUrl: input.receiptUrl,
+      receiptName: input.receiptName,
     },
   });
 
@@ -146,6 +156,8 @@ export const createExpense = async (input: z.infer<typeof createExpenseSchema>) 
       amount: new Prisma.Decimal(input.amount),
       date: input.date,
       note: input.note,
+      receiptUrl: input.receiptUrl,
+      receiptName: input.receiptName,
     },
   });
 
@@ -184,3 +196,54 @@ export const getVehicleCostSummary = async (vehicleId: number) => {
   };
 };
 
+
+export const createRecurringExpenseSchema = z.object({
+  vehicleId: z.coerce.number().int().positive(),
+  category: z.nativeEnum(ExpenseCategory),
+  amount: z.coerce.number().positive(),
+  frequency: z.enum(["Monthly", "Quarterly", "Yearly"]),
+  nextDueDate: z.coerce.date()
+});
+
+export const listRecurringExpenses = async () => {
+  return await prisma.recurringExpense.findMany({
+    include: { vehicle: { select: { regNumber: true } } },
+    orderBy: { nextDueDate: 'asc' }
+  });
+};
+
+export const createRecurringExpense = async (input: any) => {
+  return await prisma.recurringExpense.create({ data: input });
+};
+
+export const triggerDueRecurringExpenses = async () => {
+  const now = new Date();
+  const due = await prisma.recurringExpense.findMany({
+    where: { active: true, nextDueDate: { lte: now } }
+  });
+  
+  let count = 0;
+  for (const r of due) {
+    await prisma.expense.create({
+      data: {
+        vehicleId: r.vehicleId,
+        category: r.category,
+        amount: r.amount,
+        date: r.nextDueDate,
+        note: `Auto-generated ${r.frequency} expense`
+      }
+    });
+    
+    const nextDate = new Date(r.nextDueDate);
+    if (r.frequency === 'Monthly') nextDate.setMonth(nextDate.getMonth() + 1);
+    else if (r.frequency === 'Quarterly') nextDate.setMonth(nextDate.getMonth() + 3);
+    else if (r.frequency === 'Yearly') nextDate.setFullYear(nextDate.getFullYear() + 1);
+    
+    await prisma.recurringExpense.update({
+      where: { id: r.id },
+      data: { nextDueDate: nextDate }
+    });
+    count++;
+  }
+  return { processed: count };
+};

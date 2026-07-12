@@ -120,7 +120,15 @@ export const TripManagement = () => {
       setVehicles(vehicleResponse.data);
       setDrivers(driverResponse.data);
       if (selectedTrip) {
-        setSelectedTrip(tripResponse.data.find((trip) => trip.id === selectedTrip.id) ?? null);
+        // Need to refetch individual trip to get computed fields
+        const updatedTripResponse = await fetch(`/api/trips/${selectedTrip.id}`, {
+          headers: { Authorization: `Bearer ${localStorage.getItem("transitops_token") || import.meta.env.VITE_DEMO_TOKEN}` }
+        }).then(res => res.json());
+        if (updatedTripResponse?.data) {
+          setSelectedTrip(updatedTripResponse.data);
+        } else {
+          setSelectedTrip(tripResponse.data.find((trip) => trip.id === selectedTrip.id) ?? null);
+        }
       }
     } catch (error) {
       setServerError(error as ApiErrorResponse);
@@ -259,7 +267,15 @@ export const TripManagement = () => {
                     <tr
                       className="cursor-pointer border-t border-border transition hover:bg-panel/70"
                       key={trip.id}
-                      onClick={() => setSelectedTrip(trip)}
+                      onClick={async () => {
+                        setSelectedTrip(trip);
+                        try {
+                          const res = await fetch(`/api/trips/${trip.id}`, {
+                            headers: { Authorization: `Bearer ${localStorage.getItem("transitops_token") || import.meta.env.VITE_DEMO_TOKEN}` }
+                          }).then(res => res.json());
+                          if (res?.data) setSelectedTrip(res.data);
+                        } catch {}
+                      }}
                     >
                       <td className="px-5 py-4">
                         <p className="font-medium text-foreground">{trip.source}</p>
@@ -416,6 +432,37 @@ export const TripManagement = () => {
                   <XCircle className="mr-2 h-4 w-4" />
                   Cancel Trip
                 </Button>
+                
+                {selectedTrip.status === "Completed" && selectedTrip.actualCost !== undefined && (
+                  <div className="mt-4 border-t border-border pt-4">
+                    <h4 className="text-sm font-semibold mb-3 flex items-center gap-2">
+                      <Route className="h-4 w-4 text-primary" /> Trip Efficiency Scorecard
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                      <div className="p-3 bg-raised border border-border rounded-md">
+                        <p className="text-xs text-muted mb-1">Planned Cost</p>
+                        <p className="font-semibold">{formatNumber(selectedTrip.plannedCost ?? 0)} INR</p>
+                      </div>
+                      <div className="p-3 bg-raised border border-border rounded-md">
+                        <p className="text-xs text-muted mb-1">Actual Cost</p>
+                        <p className="font-semibold">{formatNumber(selectedTrip.actualCost ?? 0)} INR</p>
+                      </div>
+                    </div>
+                    <div className="p-3 bg-raised border border-border rounded-md flex justify-between items-center mb-3">
+                      <div>
+                        <p className="text-xs text-muted mb-1">Cost Deviation</p>
+                        <p className="font-semibold">{selectedTrip.costDeviationPercent}%</p>
+                      </div>
+                      <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase ${(selectedTrip.costDeviationPercent ?? 0) > 5 ? 'bg-danger/10 text-danger' : (selectedTrip.costDeviationPercent ?? 0) < -5 ? 'bg-success/10 text-success' : 'bg-info/10 text-info'}`}>
+                        {(selectedTrip.costDeviationPercent ?? 0) > 0 ? "Over Budget" : "Under Budget"}
+                      </span>
+                    </div>
+                    <div className="p-3 bg-raised border border-border rounded-md">
+                      <p className="text-xs text-muted mb-1">Fuel Efficiency</p>
+                      <p className="font-semibold">{formatNumber(selectedTrip.efficiencyKmPerLiter ?? 0)} km/L</p>
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <p className="text-sm text-muted">Choose a trip to dispatch, complete, or cancel it.</p>

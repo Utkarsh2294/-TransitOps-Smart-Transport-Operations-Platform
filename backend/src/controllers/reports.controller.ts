@@ -5,6 +5,12 @@ import {
   getVehicleCostReport,
   getVehicleCostReportCsv,
   getCompliancePdf,
+  getFuelAnomalies,
+  getFinancialBrief,
+  getBudgetStatus,
+  getTripEfficiencyRankings,
+  saveSnapshot,
+  getSnapshots
 } from "../services/reports.service.js";
 
 export const getFleetDashboardReportController = async (_req: Request, res: Response) => {
@@ -30,5 +36,35 @@ export const exportCompliancePdfController = async (_req: Request, res: Response
   res.header("Content-Type", "application/pdf");
   res.attachment("transitops-compliance-report.pdf");
   res.send(pdf);
+};
+
+export const getFuelAnomaliesController = async (_req: Request, res: Response) => {
+  const data = await getFuelAnomalies();
+  res.json({ data });
+};
+
+export const getFinancialBriefController = async (_req: Request, res: Response) => {
+  const data = await getFinancialBrief();
+  res.json({ data });
+};
+
+export const getBudgetStatusController = async (_req: Request, res: Response) => {
+  const data = await getBudgetStatus();
+  res.json({ data });
+};
+
+export const getTripEfficiencyRankingsController = async (_req: Request, res: Response) => {
+  const data = await getTripEfficiencyRankings();
+  res.json({ data });
+};
+
+export const saveSnapshotController = async (_req: Request, res: Response) => {
+  const data = await saveSnapshot();
+  res.json({ data });
+};
+
+export const getSnapshotsController = async (_req: Request, res: Response) => {
+  const data = await getSnapshots();
+  res.json({ data });
 };
 

@@ -15,6 +15,8 @@ import {
   updateVehicle,
   updateVehicleSchema,
   deleteVehicleDocument,
+  updateVehicleBudget,
+  getVehicleFuelEfficiencyHistory,
 } from "../services/vehicles.service.js";
 import { ApiError } from "../utils/apiError.js";
 import { parsePagination } from "../utils/pagination.js";
@@ -98,3 +100,17 @@ export const bulkUpdateVehicleStatusController = async (req: Request, res: Respo
   const payload = bulkStatusSchema.parse(req.body);
   res.json({ data: await bulkUpdateVehicleStatus(payload.ids, payload.status) });
 };
+
+const budgetSchema = z.object({ monthlyBudget: z.coerce.number().positive() });
+
+export const updateVehicleBudgetController = async (req: Request, res: Response) => {
+  const id = parseVehicleId(req.params);
+  const { monthlyBudget } = budgetSchema.parse(req.body);
+  res.json({ data: await updateVehicleBudget(id, monthlyBudget) });
+};
+
+export const getVehicleFuelEfficiencyHistoryController = async (req: Request, res: Response) => {
+  const id = parseVehicleId(req.params);
+  res.json({ data: await getVehicleFuelEfficiencyHistory(id) });
+};
+

@@ -101,3 +101,43 @@ export const createTrip = async (input: CreateTripInput) =>
     return serializeTrip(trip);
   });
 
+
+
+import { getVehicleCostReport } from "./reports.service.js";
+
+export const getTripById = async (id: number) => {
+  const trip = await prisma.trip.findUnique({
+    where: { id },
+    include: { vehicle: true, driver: true }
+  });
+  
+  if (!trip) throw new ApiError(404, "tripId", "Trip not found");
+  
+  let plannedVsActualDistanceDeltaKm = null;
+  let actualEfficiency = null;
+  let efficiencyVsVehicleAverage = null;
+  
+  if (trip.status === 'Completed' && trip.fuelConsumedLiters) {
+    const plannedDist = Number(trip.plannedDistanceKm);
+    const fuel = Number(trip.fuelConsumedLiters);
+    actualEfficiency = fuel > 0 ? Number((plannedDist / fuel).toFixed(2)) : 0;
+    
+    // We assume actual distance is roughly planned distance since startOdometer isn't tracked in schema
+    plannedVsActualDistanceDeltaKm = 0; 
+    
+    const vehicleCosts = await getVehicleCostReport();
+    const vc = vehicleCosts.find(v => v.vehicleId === trip.vehicleId);
+    if (vc && vc.fuelEfficiencyKmPerLiter) {
+      efficiencyVsVehicleAverage = Number((actualEfficiency - vc.fuelEfficiencyKmPerLiter).toFixed(2));
+    }
+  }
+  
+  return {
+    ...serializeTrip(trip),
+    vehicle: { regNumber: trip.vehicle.regNumber, name: trip.vehicle.name },
+    driver: { name: trip.driver.name },
+    plannedVsActualDistanceDeltaKm,
+    actualEfficiency,
+    efficiencyVsVehicleAverage
+  };
+};

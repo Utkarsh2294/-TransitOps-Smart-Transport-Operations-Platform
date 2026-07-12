@@ -5,6 +5,7 @@ import {
   createTripController,
   dispatchTripController,
   getTripsController,
+  getTripByIdController,
 } from "../controllers/trips.controller.js";
 import { requireAuth, requireRoles } from "../middleware/auth.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -17,6 +18,11 @@ tripRouter.get(
   "/",
   requireRoles("fleet_manager", "driver", "financial_analyst"),
   asyncHandler(getTripsController),
+);
+tripRouter.get(
+  "/:tripId",
+  requireRoles("fleet_manager", "driver", "financial_analyst"),
+  asyncHandler(getTripByIdController),
 );
 tripRouter.post("/", requireRoles("fleet_manager", "driver"), asyncHandler(createTripController));
 tripRouter.post(

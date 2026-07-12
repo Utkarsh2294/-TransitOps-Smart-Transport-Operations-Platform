@@ -1,5 +1,5 @@
 import { env } from "../config/env.js";
-import { getFleetDashboardReport, getVehicleCostReport } from "./reports.service.js";
+import { getFleetDashboardReport, getVehicleCostReport, getFuelAnomalies } from "./reports.service.js";
 
 type FleetAttentionItem = {
   label: string;
@@ -26,10 +26,7 @@ const buildRulesOnlyInsight = async (): Promise<FleetInsightResponse> => {
     .slice(0, 3);
 
   const inShopVehicles = vehicleCosts.filter((vehicle) => vehicle.status === "In_Shop").slice(0, 3);
-  const lowEfficiencyVehicles = vehicleCosts
-    .filter((vehicle) => vehicle.fuelEfficiencyKmPerLiter !== null)
-    .sort((left, right) => (left.fuelEfficiencyKmPerLiter ?? 0) - (right.fuelEfficiencyKmPerLiter ?? 0))
-    .slice(0, 3);
+  const lowEfficiencyVehicles = (await getFuelAnomalies()).slice(0, 3);
 
   const actions: FleetAttentionItem[] = [
     ...inShopVehicles.map((vehicle) => ({
@@ -42,9 +39,9 @@ const buildRulesOnlyInsight = async (): Promise<FleetInsightResponse> => {
       detail: `Top spend vehicle at ${round(vehicle.totalOperationalCost)} total cost.`,
       severity: "danger" as const,
     })),
-    ...lowEfficiencyVehicles.map((vehicle) => ({
-      label: vehicle.regNumber,
-      detail: `Low efficiency at ${vehicle.fuelEfficiencyKmPerLiter?.toFixed(1) ?? "N/A"} km/L.`,
+    ...lowEfficiencyVehicles.map((anomaly) => ({
+      label: anomaly.regNumber,
+      detail: `Low efficiency at ${anomaly.actualEfficiency.toFixed(1)} km/L (${anomaly.deviationPercent}% below avg).`,
       severity: "info" as const,
     })),
   ].slice(0, 5);

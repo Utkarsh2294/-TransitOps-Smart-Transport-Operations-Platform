@@ -12,6 +12,8 @@ import {
   getVehiclesController,
   updateVehicleController,
   uploadVehicleDocumentController,
+  updateVehicleBudgetController,
+  getVehicleFuelEfficiencyHistoryController,
 } from "../controllers/vehicles.controller.js";
 import { documentUpload } from "../middleware/upload.js";
 import { requireAuth, requireRoles } from "../middleware/auth.js";
@@ -27,6 +29,25 @@ vehiclesRouter.get(
   asyncHandler(getAvailableVehiclesController),
 );
 vehiclesRouter.patch("/bulk-status", requireRoles("fleet_manager"), asyncHandler(bulkUpdateVehicleStatusController));
+
+vehiclesRouter.post(
+  "/:id/budget",
+  requireRoles("fleet_manager", "financial_analyst"),
+  asyncHandler(updateVehicleBudgetController),
+);
+
+vehiclesRouter.patch(
+  "/:id/budget",
+  requireRoles("fleet_manager", "financial_analyst"),
+  asyncHandler(updateVehicleBudgetController),
+);
+
+vehiclesRouter.get(
+  "/:id/fuel-efficiency-history",
+  requireRoles("fleet_manager", "financial_analyst"),
+  asyncHandler(getVehicleFuelEfficiencyHistoryController),
+);
+
 vehiclesRouter.get("/:id/documents", requireRoles("fleet_manager", "safety_officer", "financial_analyst"), asyncHandler(getVehicleDocumentsController));
 vehiclesRouter.post("/:id/documents", requireRoles("fleet_manager", "safety_officer"), documentUpload.single("file"), asyncHandler(uploadVehicleDocumentController));
 vehiclesRouter.delete("/:id/documents/:docId", requireRoles("fleet_manager", "safety_officer"), asyncHandler(deleteVehicleDocumentController));

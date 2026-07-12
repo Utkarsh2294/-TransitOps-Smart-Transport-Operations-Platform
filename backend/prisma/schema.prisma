@@ -54,6 +54,12 @@ enum ExpenseCategory {
   other
 }
 
+enum RecurringFrequency {
+  Monthly
+  Quarterly
+  Yearly
+}
+
 model User {
   id           Int      @id @default(autoincrement())
   name         String
@@ -81,6 +87,8 @@ model Vehicle {
   fuelLogs          FuelLog[]
   expenses          Expense[]
   documents         VehicleDocument[]
+  budget            VehicleBudget?
+  recurringExpenses RecurringExpense[]
 
   @@index([status])
   @@index([type])
@@ -173,6 +181,8 @@ model FuelLog {
   liters    Decimal  @db.Decimal(12, 2)
   cost      Decimal  @db.Decimal(12, 2)
   date      DateTime @default(now())
+  receiptUrl  String?
+  receiptName String?
 
   @@index([vehicleId, date])
 }
@@ -185,4 +195,29 @@ model Expense {
   amount    Decimal         @db.Decimal(12, 2)
   date      DateTime        @default(now())
   note      String?
+  receiptUrl  String?
+  receiptName String?
+}
+
+model VehicleBudget {
+  id            Int      @id @default(autoincrement())
+  vehicleId     Int      @unique
+  vehicle       Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  monthlyBudget Decimal  @db.Decimal(12, 2)
+  updatedAt     DateTime @updatedAt
+}
+
+model RecurringExpense {
+  id          Int                @id @default(autoincrement())
+  vehicleId   Int
+  vehicle     Vehicle            @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  category    ExpenseCategory
+  amount      Decimal            @db.Decimal(12, 2)
+  frequency   RecurringFrequency
+  nextDueDate DateTime
+  active      Boolean            @default(true)
+  createdAt   DateTime           @default(now())
+  
+  @@index([vehicleId])
+  @@index([nextDueDate])
 }
