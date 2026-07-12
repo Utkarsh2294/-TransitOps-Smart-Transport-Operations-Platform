@@ -3,6 +3,7 @@ import {
   Bell,
   CarFront,
   Command,
+  Gauge,
   Fuel,
   Menu,
   Moon,
@@ -15,6 +16,7 @@ import {
 import { useEffect, useState } from "react";
 
 import { Button } from "./components/ui/Button";
+import { FleetManagerDashboard } from "./components/dashboard/FleetManagerDashboard";
 import { DriverManagement } from "./components/drivers/DriverManagement";
 import { FuelExpenseManagement } from "./components/finance/FuelExpenseManagement";
 import { FinancialReports } from "./components/reports/FinancialReports";
@@ -22,10 +24,10 @@ import { SafetyOfficerDashboard } from "./components/safety/SafetyOfficerDashboa
 import { TripManagement } from "./components/trips/TripManagement";
 import { VehicleRegistry } from "./components/vehicles/VehicleRegistry";
 
-type View = "vehicles" | "drivers" | "trips" | "finance" | "safety" | "reports";
+type View = "dashboard" | "vehicles" | "drivers" | "trips" | "finance" | "safety" | "reports";
 
 export const App = () => {
-  const [view, setView] = useState<View>("vehicles");
+  const [view, setView] = useState<View>("dashboard");
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
@@ -33,6 +35,7 @@ export const App = () => {
   }, [isDark]);
 
   const navItems = [
+    { value: "dashboard" as const, label: "Dashboard", icon: Gauge },
     { value: "vehicles" as const, label: "Vehicles", icon: CarFront },
     { value: "drivers" as const, label: "Drivers", icon: ShieldCheck },
     { value: "trips" as const, label: "Trips", icon: Route },
@@ -118,6 +121,7 @@ export const App = () => {
           </div>
         </header>
 
+        {view === "dashboard" ? <FleetManagerDashboard /> : null}
         {view === "vehicles" ? <VehicleRegistry /> : null}
         {view === "drivers" ? <DriverManagement /> : null}
         {view === "trips" ? <TripManagement /> : null}
