@@ -3,8 +3,10 @@ import {
   Bell,
   CarFront,
   Command,
+  Fuel,
   Menu,
   Moon,
+  Route,
   Search,
   ShieldCheck,
   Sun,
@@ -14,11 +16,13 @@ import { useEffect, useState } from "react";
 
 import { Button } from "./components/ui/Button";
 import { DriverManagement } from "./components/drivers/DriverManagement";
+import { FuelExpenseManagement } from "./components/finance/FuelExpenseManagement";
 import { FinancialReports } from "./components/reports/FinancialReports";
 import { SafetyOfficerDashboard } from "./components/safety/SafetyOfficerDashboard";
+import { TripManagement } from "./components/trips/TripManagement";
 import { VehicleRegistry } from "./components/vehicles/VehicleRegistry";
 
-type View = "vehicles" | "drivers" | "safety" | "reports";
+type View = "vehicles" | "drivers" | "trips" | "finance" | "safety" | "reports";
 
 export const App = () => {
   const [view, setView] = useState<View>("vehicles");
@@ -31,6 +35,8 @@ export const App = () => {
   const navItems = [
     { value: "vehicles" as const, label: "Vehicles", icon: CarFront },
     { value: "drivers" as const, label: "Drivers", icon: ShieldCheck },
+    { value: "trips" as const, label: "Trips", icon: Route },
+    { value: "finance" as const, label: "Fuel & Expenses", icon: Fuel },
     { value: "safety" as const, label: "Safety Officer", icon: Wrench },
     { value: "reports" as const, label: "Reports", icon: BarChart3 },
   ];
@@ -114,6 +120,8 @@ export const App = () => {
 
         {view === "vehicles" ? <VehicleRegistry /> : null}
         {view === "drivers" ? <DriverManagement /> : null}
+        {view === "trips" ? <TripManagement /> : null}
+        {view === "finance" ? <FuelExpenseManagement /> : null}
         {view === "safety" ? <SafetyOfficerDashboard /> : null}
         {view === "reports" ? <FinancialReports /> : null}
       </main>
