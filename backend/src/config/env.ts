@@ -10,6 +10,8 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(20, "JWT_SECRET must be at least 20 characters"),
   JWT_EXPIRES_IN: z.string().default("8h"),
   CORS_ORIGIN: z.string().min(1).default("http://localhost:5173"),
+  OPENAI_API_KEY: z.string().min(1).optional(),
+  OPENAI_MODEL: z.string().default("gpt-4.1-mini"),
 });
 
 export const env = envSchema.parse(process.env);

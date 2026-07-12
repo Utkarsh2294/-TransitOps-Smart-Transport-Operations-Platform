@@ -9,6 +9,7 @@ import { driversRouter } from "./routes/drivers.routes.js";
 import { financeRouter } from "./routes/finance.routes.js";
 import { healthRouter } from "./routes/health.routes.js";
 import { maintenanceRouter } from "./routes/maintenance.routes.js";
+import { insightsRouter } from "./routes/insights.routes.js";
 import { reportsRouter } from "./routes/reports.routes.js";
 import { tripRouter } from "./routes/trip.routes.js";
 import { vehiclesRouter } from "./routes/vehicles.routes.js";
@@ -31,6 +32,7 @@ export const createApp = () => {
   app.use("/api/drivers", driversRouter);
   app.use("/api/finance", financeRouter);
   app.use("/api/maintenance", maintenanceRouter);
+  app.use("/api/insights", insightsRouter);
   app.use("/api/reports", reportsRouter);
   app.use("/api/trips", tripRouter);
   app.use("/api/vehicles", vehiclesRouter);

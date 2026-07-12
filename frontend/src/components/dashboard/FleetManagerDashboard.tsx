@@ -1,8 +1,10 @@
-import { AlertTriangle, ArrowRight, RefreshCw, Route, Wrench } from "lucide-react";
+import { AlertTriangle, ArrowRight, BrainCircuit, RefreshCw, Route, Wrench } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import type { ApiErrorResponse } from "../../lib/api";
+import { getFleetInsights } from "../../lib/insights";
 import { getFleetDashboardReport, getVehicleCostReport } from "../../lib/reports";
+import type { FleetInsightResponse } from "../../types/insights";
 import type { FleetDashboardReport, VehicleCostReportRow } from "../../types/report";
 import { Button } from "../ui/Button";
 import { StatusBadge } from "../ui/StatusBadge";
@@ -37,6 +39,7 @@ const KpiCard = ({ helper, label, value }: KpiCardProps) => (
 export const FleetManagerDashboard = () => {
   const [dashboard, setDashboard] = useState<FleetDashboardReport | null>(null);
   const [vehicleCosts, setVehicleCosts] = useState<VehicleCostReportRow[]>([]);
+  const [insights, setInsights] = useState<FleetInsightResponse | null>(null);
   const [serverError, setServerError] = useState<ApiErrorResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -61,12 +64,14 @@ export const FleetManagerDashboard = () => {
     setServerError(null);
 
     try {
-      const [dashboardResponse, costsResponse] = await Promise.all([
+      const [dashboardResponse, costsResponse, insightsResponse] = await Promise.all([
         getFleetDashboardReport(),
         getVehicleCostReport(),
+        getFleetInsights(),
       ]);
       setDashboard(dashboardResponse.data);
       setVehicleCosts(costsResponse.data);
+      setInsights(insightsResponse.data);
     } catch (error) {
       setServerError(error as ApiErrorResponse);
     } finally {
@@ -265,20 +270,51 @@ export const FleetManagerDashboard = () => {
                 </div>
               </div>
 
-              <div className="rounded-lg border border-border bg-surface p-5">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h3 className="text-base font-semibold">Next Best Action</h3>
-                    <p className="mt-1 text-sm text-muted">Review in-shop vehicles and draft trips before dispatch.</p>
-                  </div>
-                  <ArrowRight className="h-5 w-5 text-primary" />
+            <div className="rounded-lg border border-border bg-surface p-5">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-semibold">Next Best Action</h3>
+                  <p className="mt-1 text-sm text-muted">Review in-shop vehicles and draft trips before dispatch.</p>
+                </div>
+                <ArrowRight className="h-5 w-5 text-primary" />
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-border bg-surface p-5">
+              <div className="mb-4 flex items-center gap-2">
+                <div className="grid h-9 w-9 place-items-center rounded-md bg-primary/10 text-primary">
+                  <BrainCircuit className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold">Fleet Briefing</h3>
+                  <p className="text-sm text-muted">
+                    {insights?.source === "ai" ? "AI summary from current fleet data" : "Rules-based fallback summary"}
+                  </p>
                 </div>
               </div>
-            </aside>
-          </div>
-        </>
+              <p className="text-sm leading-6 text-slate-200">
+                {insights?.briefing ?? "No briefing available yet."}
+              </p>
+              <div className="mt-4 space-y-2">
+                {(insights?.actions ?? []).slice(0, 4).map((action) => (
+                  <div className="rounded-md border border-border bg-background p-3" key={`${action.label}-${action.detail}`}>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-medium text-white">{action.label}</p>
+                        <p className="mt-1 text-xs text-muted">{action.detail}</p>
+                      </div>
+                      <span className="rounded-full border border-border px-2 py-1 text-[11px] uppercase tracking-wide text-muted">
+                        {action.severity}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </aside>
+        </div>
+      </>
       ) : null}
     </section>
   );
 };
-
