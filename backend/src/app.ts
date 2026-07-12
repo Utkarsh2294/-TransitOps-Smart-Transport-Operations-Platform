@@ -6,6 +6,7 @@ import morgan from "morgan";
 import { env } from "./config/env.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
 import { healthRouter } from "./routes/health.routes.js";
+import { tripRouter } from "./routes/trip.routes.js";
 
 export const createApp = () => {
   const app = express();
@@ -21,6 +22,7 @@ export const createApp = () => {
   app.use(morgan(env.NODE_ENV === "production" ? "combined" : "dev"));
 
   app.use("/api/health", healthRouter);
+  app.use("/api/trips", tripRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
