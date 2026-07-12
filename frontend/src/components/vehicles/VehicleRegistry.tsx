@@ -3,6 +3,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 
 import { Button } from "../ui/Button";
 import { StatusBadge } from "../ui/StatusBadge";
+import { VehicleMaintenance } from "../maintenance/VehicleMaintenance";
 import { createVehicle, deleteVehicle, getVehicles, updateVehicle } from "../../lib/vehicles";
 import type { ApiErrorResponse } from "../../lib/api";
 import type { Vehicle, VehicleFormValues, VehicleStatus } from "../../types/vehicle";
@@ -64,12 +65,12 @@ const Field = ({ error, label, name, onChange, type = "text", value }: FieldProp
   <label className="block">
     <span className="text-xs font-medium uppercase tracking-wide text-muted">{label}</span>
     <input
-      className="mt-2 h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none transition placeholder:text-slate-600 focus:border-primary"
+      className="mt-2 h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none transition placeholder:text-muted focus:border-primary focus:ring-2 focus:ring-primary"
       onChange={(event) => onChange(name, event.target.value)}
       type={type}
       value={value}
     />
-    {error ? <span className="mt-1 block text-xs text-red-300">{error}</span> : null}
+    {error ? <span className="mt-1 block text-xs text-danger">{error}</span> : null}
   </label>
 );
 
@@ -84,6 +85,14 @@ export const VehicleRegistry = () => {
 
   const availableCount = useMemo(
     () => vehicles.filter((vehicle) => vehicle.status === "Available").length,
+    [vehicles],
+  );
+  const attentionCount = useMemo(
+    () => vehicles.filter((vehicle) => vehicle.status === "In_Shop" || vehicle.status === "Retired").length,
+    [vehicles],
+  );
+  const totalCapacityKg = useMemo(
+    () => vehicles.reduce((total, vehicle) => total + vehicle.maxLoadCapacityKg, 0),
     [vehicles],
   );
 
@@ -178,11 +187,11 @@ export const VehicleRegistry = () => {
   };
 
   return (
-    <section className="mx-auto max-w-7xl px-4 py-6 lg:px-8">
+    <section className="mx-auto max-w-7xl px-4 py-7 lg:px-8">
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-sm text-muted">Fleet & Compliance</p>
-          <h2 className="mt-1 text-2xl font-semibold">Vehicle Registry</h2>
+          <p className="text-sm font-medium text-primary">Fleet & Compliance</p>
+          <h2 className="mt-1 text-3xl font-semibold tracking-tight">Vehicle Registry</h2>
         </div>
         <div className="flex items-center gap-2">
           <Button onClick={() => void loadVehicles()} type="button" variant="outline">
@@ -196,25 +205,44 @@ export const VehicleRegistry = () => {
         </div>
       </div>
 
-      <div className="mb-6 grid gap-4 md:grid-cols-3">
-        <div className="rounded-lg border border-border bg-surface p-5 shadow-glow">
-          <p className="text-sm text-muted">Total Vehicles</p>
-          <p className="mt-2 text-3xl font-semibold">{vehicles.length}</p>
+      <div className="mb-6 grid gap-4 md:grid-cols-4">
+        <div className="rounded-lg border border-border bg-raised p-5 shadow-card md:col-span-2 md:row-span-2">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-sm text-muted">Fleet Assets</p>
+              <p className="mt-3 text-5xl font-semibold tracking-tight">{vehicles.length}</p>
+            </div>
+            <StatusBadge status="Available" />
+          </div>
+          <div className="mt-8 grid grid-cols-2 gap-3">
+            <div className="rounded-md border border-border bg-surface p-3">
+              <p className="text-xs uppercase tracking-wide text-muted">Available</p>
+              <p className="mt-1 text-2xl font-semibold text-success">{availableCount}</p>
+            </div>
+            <div className="rounded-md border border-border bg-surface p-3">
+              <p className="text-xs uppercase tracking-wide text-muted">Capacity</p>
+              <p className="mt-1 text-2xl font-semibold">{formatNumber(totalCapacityKg)} kg</p>
+            </div>
+          </div>
         </div>
-        <div className="rounded-lg border border-border bg-surface p-5">
+        <div className="rounded-lg border border-border bg-surface p-5 shadow-card">
           <p className="text-sm text-muted">Available</p>
-          <p className="mt-2 text-3xl font-semibold">{availableCount}</p>
+          <p className="mt-2 text-4xl font-semibold tracking-tight text-success">{availableCount}</p>
         </div>
-        <div className="rounded-lg border border-border bg-surface p-5">
+        <div className="rounded-lg border border-border bg-surface p-5 shadow-card">
           <p className="text-sm text-muted">In Shop / Retired</p>
-          <p className="mt-2 text-3xl font-semibold">
-            {vehicles.filter((vehicle) => vehicle.status === "In_Shop" || vehicle.status === "Retired").length}
+          <p className="mt-2 text-4xl font-semibold tracking-tight text-warning">{attentionCount}</p>
+        </div>
+        <div className="rounded-lg border border-border bg-surface p-5 shadow-card md:col-span-2">
+          <p className="text-sm text-muted">Registry Mode</p>
+          <p className="mt-2 text-2xl font-semibold tracking-tight">
+            {selectedVehicle ? selectedVehicle.regNumber : "New asset"}
           </p>
         </div>
       </div>
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_420px]">
-        <div className="overflow-hidden rounded-lg border border-border bg-surface">
+        <div className="overflow-hidden rounded-lg border border-border bg-surface shadow-card">
           <div className="border-b border-border px-5 py-4">
             <h3 className="text-base font-semibold">Registry</h3>
           </div>
@@ -245,14 +273,14 @@ export const VehicleRegistry = () => {
                 <tbody>
                   {vehicles.map((vehicle) => (
                     <tr
-                      className="cursor-pointer border-t border-border transition hover:bg-panel/70"
+                      className="cursor-pointer border-t border-border transition hover:bg-panel"
                       key={vehicle.id}
                       onClick={() => startEdit(vehicle)}
                     >
-                      <td className="px-5 py-4 font-medium text-white">{vehicle.regNumber}</td>
-                      <td className="px-5 py-4 text-slate-300">{vehicle.name}</td>
-                      <td className="px-5 py-4 text-slate-300">{vehicle.type}</td>
-                      <td className="px-5 py-4 text-slate-300">
+                      <td className="px-5 py-4 font-semibold text-foreground">{vehicle.regNumber}</td>
+                      <td className="px-5 py-4 text-muted">{vehicle.name}</td>
+                      <td className="px-5 py-4 text-muted">{vehicle.type}</td>
+                      <td className="px-5 py-4 text-muted">
                         {formatNumber(vehicle.maxLoadCapacityKg)} kg
                       </td>
                       <td className="px-5 py-4">
@@ -266,7 +294,8 @@ export const VehicleRegistry = () => {
           )}
         </div>
 
-        <form className="rounded-lg border border-border bg-surface p-5" onSubmit={handleSubmit}>
+        <div>
+        <form className="rounded-lg border border-border bg-surface p-5 shadow-card" onSubmit={handleSubmit}>
           <div className="mb-5 flex items-start justify-between gap-3">
             <div>
               <h3 className="text-base font-semibold">
@@ -334,7 +363,7 @@ export const VehicleRegistry = () => {
             <label className="block">
               <span className="text-xs font-medium uppercase tracking-wide text-muted">Status</span>
               <select
-                className="mt-2 h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none transition focus:border-primary"
+                className="mt-2 h-10 w-full rounded-md border border-border bg-background px-3 text-sm text-foreground outline-none transition focus:border-primary focus:ring-2 focus:ring-primary"
                 onChange={(event) => handleFieldChange("status", event.target.value)}
                 value={values.status}
               >
@@ -348,7 +377,7 @@ export const VehicleRegistry = () => {
           </div>
 
           {serverError ? (
-            <div className="mt-4 rounded-md border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-red-200">
+            <div className="mt-4 rounded-md border border-danger bg-background px-3 py-2 text-sm text-danger">
               {serverError.message}
             </div>
           ) : null}
@@ -366,6 +395,8 @@ export const VehicleRegistry = () => {
             ) : null}
           </div>
         </form>
+        {selectedVehicle ? <VehicleMaintenance key={selectedVehicle.id} onChanged={loadVehicles} vehicle={selectedVehicle} /> : null}
+        </div>
       </div>
     </section>
   );

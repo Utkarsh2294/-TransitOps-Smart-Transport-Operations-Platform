@@ -1,3 +1,5 @@
+import type { CSSProperties } from "react";
+
 import { cn } from "../../lib/cn";
 
 type StatusBadgeProps = {
@@ -9,31 +11,41 @@ type StatusBadgeProps = {
     | "In_Shop"
     | "Off Duty"
     | "Off_Duty"
+    | "Open"
+    | "Closed"
     | "Retired"
     | "Suspended";
 };
 
-const statusClasses: Record<StatusBadgeProps["status"], string> = {
-  Available: "border-success/30 bg-success/10 text-green-300",
-  "On Trip": "border-warning/30 bg-warning/10 text-amber-300",
-  On_Trip: "border-warning/30 bg-warning/10 text-amber-300",
-  "In Shop": "border-danger/30 bg-danger/10 text-red-300",
-  In_Shop: "border-danger/30 bg-danger/10 text-red-300",
-  "Off Duty": "border-slate-500/30 bg-slate-500/10 text-slate-300",
-  Off_Duty: "border-slate-500/30 bg-slate-500/10 text-slate-300",
-  Retired: "border-slate-500/30 bg-slate-500/10 text-slate-300",
-  Suspended: "border-danger/30 bg-danger/10 text-red-300",
+const statusTokens: Record<StatusBadgeProps["status"], string> = {
+  Available: "var(--status-success)",
+  "On Trip": "var(--status-info)",
+  On_Trip: "var(--status-info)",
+  "In Shop": "var(--status-warning)",
+  In_Shop: "var(--status-warning)",
+  "Off Duty": "var(--text-secondary)",
+  Off_Duty: "var(--text-secondary)",
+  Open: "var(--status-warning)",
+  Closed: "var(--status-success)",
+  Retired: "var(--status-danger)",
+  Suspended: "var(--status-danger)",
 };
 
 export const StatusBadge = ({ status }: StatusBadgeProps) => {
   const label = status.replace("_", " ");
+  const color = statusTokens[status];
+  const style = {
+    backgroundColor: `color-mix(in srgb, ${color} 11%, transparent)`,
+    borderColor: `color-mix(in srgb, ${color} 30%, transparent)`,
+    color,
+  } satisfies CSSProperties;
 
   return (
     <span
       className={cn(
-        "mt-3 inline-flex rounded-full border px-2.5 py-1 text-xs font-medium",
-        statusClasses[status],
+        "inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold",
       )}
+      style={style}
     >
       {label}
     </span>

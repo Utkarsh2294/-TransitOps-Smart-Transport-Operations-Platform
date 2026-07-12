@@ -115,6 +115,31 @@ export const updateDriver = async (id: number, input: z.infer<typeof updateDrive
   }
 };
 
+export const unsuspendDriver = async (id: number) => {
+  try {
+    const driver = await prisma.driver.findUnique({ where: { id } });
+
+    if (!driver) {
+      throw new ApiError(404, "driver", "Driver not found");
+    }
+
+    if (driver.status !== DriverStatus.Suspended) {
+      throw new ApiError(400, "status", "Only suspended drivers can be unsuspended");
+    }
+
+    const nextStatus = driver.licenseExpiryDate > new Date()
+      ? DriverStatus.Available
+      : DriverStatus.Off_Duty;
+
+    return prisma.driver.update({
+      where: { id },
+      data: { status: nextStatus },
+    });
+  } catch (error) {
+    handlePrismaDriverError(error);
+  }
+};
+
 export const deleteDriver = async (id: number) => {
   try {
     await prisma.driver.delete({ where: { id } });

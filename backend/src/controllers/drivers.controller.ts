@@ -8,6 +8,7 @@ import {
   getDriverById,
   listAvailableDrivers,
   listDrivers,
+  unsuspendDriver,
   updateDriver,
   updateDriverSchema,
 } from "../services/drivers.service.js";
@@ -52,6 +53,12 @@ export const updateDriverController = async (req: Request, res: Response) => {
   }
 
   const driver = await updateDriver(id, payload);
+  res.json({ data: driver });
+};
+
+export const unsuspendDriverController = async (req: Request, res: Response) => {
+  const id = parseDriverId(req.params);
+  const driver = await unsuspendDriver(id);
   res.json({ data: driver });
 };
 

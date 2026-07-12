@@ -6,6 +6,7 @@ import {
   getAvailableDriversController,
   getDriverController,
   getDriversController,
+  unsuspendDriverController,
   updateDriverController,
 } from "../controllers/drivers.controller.js";
 import { requireAuth, requireRoles } from "../middleware/auth.js";
@@ -29,6 +30,11 @@ driversRouter.get(
   "/:id",
   requireRoles("fleet_manager", "safety_officer", "financial_analyst"),
   asyncHandler(getDriverController),
+);
+driversRouter.patch(
+  "/:id/unsuspend",
+  requireRoles("fleet_manager", "safety_officer"),
+  asyncHandler(unsuspendDriverController),
 );
 driversRouter.post("/", requireRoles("fleet_manager"), asyncHandler(createDriverController));
 driversRouter.put("/:id", requireRoles("fleet_manager"), asyncHandler(updateDriverController));

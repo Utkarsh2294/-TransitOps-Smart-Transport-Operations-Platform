@@ -11,8 +11,13 @@ const toDriverPayload = (values: DriverFormValues) => ({
   status: values.status,
 });
 
-export const getDrivers = (page = 1) =>
-  apiRequest<DriverListResponse>(`/drivers?page=${page}&limit=10`);
+export const getDrivers = (page = 1, limit = 10) =>
+  apiRequest<DriverListResponse>(`/drivers?page=${page}&limit=${limit}`);
+
+export const unsuspendDriver = (driverId: number) =>
+  apiRequest<DriverResponse>(`/drivers/${driverId}/unsuspend`, {
+    method: "PATCH",
+  });
 
 export const createDriver = (values: DriverFormValues) =>
   apiRequest<DriverResponse>("/drivers", {
