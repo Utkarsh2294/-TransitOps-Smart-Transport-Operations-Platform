@@ -3,9 +3,10 @@ import { useState } from "react";
 
 import { Button } from "./components/ui/Button";
 import { DriverManagement } from "./components/drivers/DriverManagement";
+import { FinancialReports } from "./components/reports/FinancialReports";
 import { VehicleRegistry } from "./components/vehicles/VehicleRegistry";
 
-type View = "vehicles" | "drivers";
+type View = "vehicles" | "drivers" | "reports";
 
 export const App = () => {
   const [view, setView] = useState<View>("vehicles");
@@ -36,6 +37,15 @@ export const App = () => {
           >
             Drivers
           </button>
+          <button
+            className={`block w-full rounded-md px-3 py-2 text-left text-sm transition ${
+              view === "reports" ? "bg-panel text-white" : "text-slate-300 hover:bg-panel hover:text-white"
+            }`}
+            onClick={() => setView("reports")}
+            type="button"
+          >
+            Reports
+          </button>
           {["Maintenance", "Safety Officer"].map((item) => (
             <span
               className="block rounded-md px-3 py-2 text-sm text-slate-500"
@@ -57,6 +67,7 @@ export const App = () => {
               {[
                 ["vehicles", "Vehicles"],
                 ["drivers", "Drivers"],
+                ["reports", "Reports"],
               ].map(([value, label]) => (
                 <button
                   className={`h-8 rounded px-3 text-sm transition ${
@@ -76,7 +87,13 @@ export const App = () => {
           </Button>
         </header>
 
-        {view === "vehicles" ? <VehicleRegistry /> : <DriverManagement />}
+        {view === "vehicles" ? (
+          <VehicleRegistry />
+        ) : view === "drivers" ? (
+          <DriverManagement />
+        ) : (
+          <FinancialReports />
+        )}
       </main>
     </div>
   );
