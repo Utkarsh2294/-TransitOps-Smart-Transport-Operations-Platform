@@ -18,7 +18,7 @@ const phaseCards = [
   },
   {
     title: "Maintenance",
-    description: "Open and close workflows with Mongo transactions.",
+    description: "Open and close workflows with SQL transactions.",
     icon: Wrench,
     status: "Phase 7",
   },
@@ -51,10 +51,6 @@ export const App = () => {
             <Button aria-label="Open navigation" size="icon" variant="ghost">
               <Menu className="h-5 w-5" />
             </Button>
-            <div>
-              <p className="text-sm text-muted">Phase 1 foundation</p>
-              <h2 className="text-base font-semibold">Person A workspace</h2>
-            </div>
           </div>
           <Button aria-label="Notifications" size="icon" variant="ghost">
             <Bell className="h-5 w-5" />
@@ -100,13 +96,6 @@ export const App = () => {
             ))}
           </div>
 
-          <div className="mt-8 rounded-lg border border-border bg-surface p-5">
-            <p className="text-sm font-medium text-primary">Database foundation</p>
-            <p className="mt-2 text-sm leading-6 text-muted">
-              Updated plan applied: PostgreSQL with Prisma Client, real foreign keys, enum-backed
-              statuses, and SQL transactions for maintenance workflows.
-            </p>
-          </div>
         </section>
       </main>
     </div>

@@ -7,6 +7,7 @@ import { env } from "./config/env.js";
 import { errorHandler, notFoundHandler } from "./middleware/error.js";
 import { healthRouter } from "./routes/health.routes.js";
 import { tripRouter } from "./routes/trip.routes.js";
+import { vehiclesRouter } from "./routes/vehicles.routes.js";
 
 export const createApp = () => {
   const app = express();
@@ -23,10 +24,10 @@ export const createApp = () => {
 
   app.use("/api/health", healthRouter);
   app.use("/api/trips", tripRouter);
+  app.use("/api/vehicles", vehiclesRouter);
 
   app.use(notFoundHandler);
   app.use(errorHandler);
 
   return app;
 };
-
